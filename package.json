@@ -1,0 +1,36 @@
+{
+  "name": "encrypted-smiley-secure-protocol",
+  "version": "0.0.2",
+  "description": "The encryption of SSP (Smiley Secure Protocol) ensures superior protection and reliability of the data, which is transferred between validator and host machine.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skokov3812/encrypted-smiley-secure-protocol.git"
+  },
+  "keywords": [
+    "eSSP",
+    "SSP",
+    "Encrypted",
+    "Smiley",
+    "Secure",
+    "Protocol",
+    "ITL"
+  ],
+  "author": "Roman Skokov (skokov3812)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/skokov3812/encrypted-smiley-secure-protocol/issues"
+  },
+  "homepage": "https://github.com/skokov3812/encrypted-smiley-secure-protocol#readme",
+  "dependencies": {
+    "aes-js": "^3.1.2",
+    "big-integer": "^1.6.45",
+    "chalk": "^2.4.2",
+    "int64-buffer": "^0.99.1007",
+    "random-prime": "^1.0.0",
+    "serialport": "^7.1.5"
+  }
+}
