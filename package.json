@@ -1,7 +1,7 @@
 {
   "name": "encrypted-smiley-secure-protocol",
   "version": "0.0.3",
-  "description": "The encryption of SSP (Smiley Secure Protocol) ensures superior protection and reliability of the data, which is transferred between validator and host machine.",
+  "description": "Node.JS library Encrypted Smiley ® Secure Protocol (eSSP, SSP)",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
