@@ -102,9 +102,9 @@ function argsToByte(command, args, protocol_version){
 		
 		else if(command == 'SET_DENOMINATION_LEVEL'){
 			if(protocol_version >= 6){
-				return [...int16LE(args.value)].concat([...int32LE(args.denimonation)], [...Buffer.from(args.country_code, 'ascii')]);
+				return [...int16LE(args.value)].concat([...int32LE(args.denomination)], [...Buffer.from(args.country_code, 'ascii')]);
 			} else {
-				return [...int16LE(args.value)].concat([...int16LE(args.denimonation)])
+				return [...int16LE(args.value)].concat([...int16LE(args.denomination)])
 			}
 		}
 		
