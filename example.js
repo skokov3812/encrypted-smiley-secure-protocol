@@ -28,12 +28,12 @@ eSSP.on('CLOSE', () => {
 
 eSSP.on('READ_NOTE', result => {
 	console.log('READ_NOTE', result);
-	console.log(channels[result.info.channel])
+	console.log(channels[result.channel])
 	
-	if(channels[result.info.channel].value == 500){
+	if(channels[result.channel].value == 500){
 		eSSP.command('REJECT_BANKNOTE')
 	}
-	if(channels[result.info.channel].value == 1000){
+	if(channels[result.channel].value == 1000){
 		eSSP.command('PAYOUT_AMOUNT', {
 			amount: 10000,
 			country_code: 'RUB',
@@ -59,6 +59,16 @@ eSSP.open('COM1', serialPortConfig)
 .then(() => eSSP.command('GET_SERIAL_NUMBER'))
 .then(result => {
 	console.log('SERIAL NUMBER:', result.info.serial_number)
+	return;
+})
+.then(() => eSSP.command('SETUP_REQUEST'))
+.then(result => {
+	for(let i=0; i < result.info.channel_value.length; i++){
+		channels[result.info.channel_value[i]] = {
+			value: result.info.expanded_channel_value[i],
+			country_code: result.info.expanded_channel_country_code[i]
+		}
+	}
 	return;
 })
 .then(() => eSSP.command('SET_DENOMINATION_ROUTE', {route: 'payout', value: 10000, country_code: 'RUB'}))
