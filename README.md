@@ -206,7 +206,7 @@ eSSP.command('PAYOUT_AMOUNT', {
 ```js
 eSSP.command('SET_DENOMINATION_LEVEL', {
     value: 1,
-    denimonation: 10000,
+    denomination: 10000,
     country_code: 'RUB'
 })
 ```
