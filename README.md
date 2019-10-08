@@ -1,4 +1,6 @@
 # encrypted-smiley-secure-protocol
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fskokov3812%2Fencrypted-smiley-secure-protocol.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fskokov3812%2Fencrypted-smiley-secure-protocol?ref=badge_shield)
+
 Node.JS library Encrypted Smiley ® Secure Protocol (eSSP, SSP)
 
 **Supported devices:** NV9USB, NV10USB, BV20, BV50, BV100, NV200, SMART Hopper, SMART Payout, NV11
@@ -407,3 +409,7 @@ SMART_EMPTIED						|   The device has completed its Smart Empty command.
 SMART_EMPTYING      				|   The device is in the process of carrying out its Smart Empty command from the host.
 ERROR_DURING_PAYOUT					|   Returned if an error is detected whilst moving a note inside the SMART Payout unit.
 JAM_RECOVERY						|   The SMART Payout unit is in the process of recovering from a detected jam.
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fskokov3812%2Fencrypted-smiley-secure-protocol.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fskokov3812%2Fencrypted-smiley-secure-protocol?ref=badge_large)
