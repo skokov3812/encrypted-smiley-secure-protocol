@@ -320,9 +320,9 @@ function parseData(data, currentCommand, protocol_version) {
 				3: 'high',
 				4: 'inhibited'
 			}
-			result.info.chanel = {};
+			result.info.channel = {};
 			for(let i=1; i<=data[0]; i++){
-				result.info.chanel[i] = level[data[i]];
+				result.info.channel[i] = level[data[i]];
 			}
 		}
 
@@ -408,7 +408,7 @@ function parseData(data, currentCommand, protocol_version) {
 			
 			if(data.length == count){
 				for(let i=0; i<count; i++){
-					result.info.slot[i+1] = { chanel: data[i] }
+					result.info.slot[i+1] = { channel: data[i] }
 				}
 			} else {
 				let tmp = Buffer.from(data).toString().match(/.{4}/g)
@@ -460,13 +460,13 @@ function parseData(data, currentCommand, protocol_version) {
 					result.info.name == 'NOTE_CLEARED_FROM_FRONT' || 
 					result.info.name == 'NOTE_CLEARED_TO_CASHBOX'
 					){
-						result.info.chanel = data[1];
+						result.info.channel = data[1];
 				}
 
 
 				else if(result.info.name == 'FRAUD_ATTEMPT'){
 					if(data.length == 2){
-						result.info.chanel = data[1];
+						result.info.channel = data[1];
 					} else if(data.length == 5){
 						result.info.value = Buffer.from(data.slice(1, 5)).readInt32LE();
 					} else {
