@@ -83,10 +83,10 @@ function argsToByte(command, args, protocol_version){
 
 		else if(command == 'SET_HOPPER_OPTIONS'){
 			let res = 0;
-			res += payMode ? 1 : 0;
-			res += levelCheck ? 2 : 0;
-			res += motorSpeed ? 4 : 0;
-			res += cashBoxPayAcive ? 8 : 0;
+			res += args.payMode ? 1 : 0;
+			res += args.levelCheck ? 2 : 0;
+			res += args.motorSpeed ? 4 : 0;
+			res += args.cashBoxPayAcive ? 8 : 0;
 			
 			return [...int16LE(res)];
 		}
