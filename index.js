@@ -282,7 +282,7 @@ module.exports = class SSP extends events {
 	}
 
 	enable(){
-		return this.exec('ENABLE')
+		return this.command('ENABLE')
 		.then(res => {
 			if(res.status == 'OK'){
 				this.enabled = true;
@@ -293,7 +293,7 @@ module.exports = class SSP extends events {
 	}
 
 	disable(){
-		return this.exec('DISABLE')
+		return this.command('DISABLE')
 		.then(res => {
 			if(res.status == 'OK'){
 				this.enabled = false;
