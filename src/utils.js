@@ -66,13 +66,7 @@ function argsToByte(command, args, protocol_version){
 		
 		
 		else if(command == 'SET_CHANNEL_INHIBITS'){
-			let res = 0;
-			args.channels.forEach((channel, i) => {
-				if(i<16){
-					res += channel ? (i == 0 ? 1 : i*2) : 0;
-				}
-			})
-			return [...int16LE(res)];
+			return [...int16LE(parseInt(args.channels.reverse().join(''), 2))];
 		}
 		
 		
