@@ -66,7 +66,7 @@ function argsToByte(command, args, protocol_version){
 		
 		
 		else if(command == 'SET_CHANNEL_INHIBITS'){
-			return [...int16LE(parseInt(args.channels.reverse().join(''), 2))];
+			return [...int16LE(parseInt(args.channels.reverse().map(bit => bit ? 1 : 0).join(''), 2))];
 		}
 		
 		
