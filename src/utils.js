@@ -199,7 +199,7 @@ function argsToByte(command, args, protocol_version){
       else if(args.baudrate == 38400){byte = 1;}
       else if(args.baudrate == 115200){byte = 2;}
 
-      return [byte, reset_to_default_on_reset ? 0 : 1];
+      return [byte, args.reset_to_default_on_reset ? 0 : 1];
     }
 
 
