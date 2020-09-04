@@ -7,5 +7,5 @@ module.exports = {
   11: 'Stand Alone Printer',
   13: 'TEBS',
   14: 'TEBS with SMART Payout',
-  15: 'TEBS with SMART Ticket',
+  15: 'TEBS with SMART Ticket'
 };

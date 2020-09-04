@@ -40,7 +40,7 @@ module.exports = {
     args: true,
     device: ['NV9USB', 'NV10USB', 'BV20', 'BV50', 'BV100', 'NV200', 'SMART Hopper', 'SMART Payout', 'NV11'],
     description: 'Dual byte command, the first byte is the command; the second byte is the version of the protocol that is implemented on the host. So for example, to enable events on BNV to protocol version 6, send 06, 06. The device will respond with OK if the device supports version 6, or FAIL (0xF8) if it does not.',
-    example: `SSP.command('HOST_PROTOCOL_VERSION', {version: 6})`
+    example: 'SSP.command(\'HOST_PROTOCOL_VERSION\', {version: 6})'
   },
   POLL: {
     code: 7,
@@ -160,7 +160,7 @@ module.exports = {
     args: true,
     device: ['NV9USB', 'NV200'],
     description: 'This command allows the host to set-up the bar code reader(s) configuration on the device. 3 bytes of data define the configuration. In this example we enable both readers with format interleaved 1 of 5 for 18 characters.',
-    example: `SSP.command('SET_BAR_CODE_CONFIGURATION', {enable: 'top', numChar: 6}) //enable: none|top|bottom|both   numChar(min:6 max:24)`
+    example: 'SSP.command(\'SET_BAR_CODE_CONFIGURATION\', {enable: \'top\', numChar: 6}) //enable: none|top|bottom|both   numChar(min:6 max:24)'
   },
   GET_BAR_CODE_INHIBIT_STATUS: {
     code: 37,
@@ -175,7 +175,7 @@ module.exports = {
     args: true,
     device: ['NV9USB', 'NV200'],
     description: 'Sets up the bar code inhibit status register. A single data byte representing a bit register is sent. Bit 0 is Currency read enable (0 = enable, 1= disable) Bit 1 is the Bar code enable (0 = enable, 1 = disable). All other bits are not used and set to 1. This example shows a request to a device to have currency enabled, bar code enabled.',
-    example: `SSP.command('SET_BAR_CODE_INHIBIT_STATUS', {currencyRead: true, barCode: true})`
+    example: 'SSP.command(\'SET_BAR_CODE_INHIBIT_STATUS\', {currencyRead: true, barCode: true})'
   },
   GET_BAR_CODE_DATA: {
     code: 39,
@@ -197,7 +197,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper', 'SMART Payout'],
     description: 'A command to set the monetary value to be paid by the payout unit. Using protocol version 6, the host also sends a pre-test option byte (TEST_PAYOUT_AMOUT 0x19, PAYOUT_AMOUNT 0x58), which will determine if the command amount is tested or paid out. This is useful for multi-payout systems so that the ability to pay a split down amount can be tested before committing to actual payout.',
-    example: `SSP.command('PAYOUT_AMOUNT', {amount: 100, country_code: 'RUB', test: false})`
+    example: 'SSP.command(\'PAYOUT_AMOUNT\', {amount: 100, country_code: \'RUB\', test: false})'
   },
   SET_DENOMINATION_LEVEL: {
     code: 52,
@@ -212,7 +212,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper', 'SMART Payout'],
     description: 'This command returns the level of a denomination stored in a payout device as a 2 byte value. In protocol versions greater or equal to 6, the host adds a 3 byte ascii country code to give mulit-currency functionality. Send the requested denomination to find its level. In this case a request to find the amount of 0.10c coins in protocol version 5.',
-    example: `SSP.command('GET_DENOMINATION_LEVEL', {amount: 100, country_code: 'RUB'})`
+    example: 'SSP.command(\'GET_DENOMINATION_LEVEL\', {amount: 100, country_code: \'RUB\'})'
   },
   COMMUNICATION_PASS_THROUGH: {
     code: 55,
@@ -234,7 +234,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper', 'SMART Payout', 'NV11'],
     description: 'This command will configure the denomination to be either routed to the cashbox on detection or stored to be made available for later possible payout.',
-    example: `SSP.command('SET_DENOMINATION_ROUTE', {route: 'payout', value: 10000, country_code: 'RUB'}) //route: payout|cashbox`
+    example: 'SSP.command(\'SET_DENOMINATION_ROUTE\', {route: \'payout\', value: 10000, country_code: \'RUB\'}) //route: payout|cashbox'
   },
   GET_DENOMINATION_ROUTE: {
     code: 60,
@@ -249,7 +249,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper', 'SMART Payout'],
     description: 'A command to float the hopper unit to leave a requested value of money, with a requested minimum possible payout level. All monies not required to meet float value are routed to cashbox. Using protocol version 6, the host also sends a pre-test option byte (TEST_FLOAT_AMOUT 0x19, FLOAT_AMOUNT 0x58), which will determine if the command amount is tested or floated. This is useful for multi-payout systems so that the ability to pay a split down amount can be tested before committing to actual float.',
-    example: `SSP.command('FLOAT_AMOUNT', {min_possible_payout: 10, amount: 100, country_code: 'RUB', test: false})`
+    example: 'SSP.command(\'FLOAT_AMOUNT\', {min_possible_payout: 10, amount: 100, country_code: \'RUB\', test: false})'
   },
   GET_MINIMUM_PAYOUT: {
     code: 62,
@@ -271,7 +271,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper'],
     description: 'This command is used to enable or disable acceptance of individual coin values from a coin acceptor connected to the hopper.',
-    example: `SSP.command('SET_COIN_MECH_INHIBITS', {amount: 100, inhibited: true})`
+    example: 'SSP.command(\'SET_COIN_MECH_INHIBITS\', {amount: 100, inhibited: true})'
   },
   GET_NOTE_POSITIONS: {
     code: 65,
@@ -300,7 +300,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper', 'SMART Payout'],
     description: 'A command to float (leave in device) the requested quantity of individual denominations. The quantities of denominations to leave are sent as a 2 byte little endian array; the money values as 4-byte little endian array and the country code as a 3-byte ASCII array. The host also adds an option byte to the end of the command array (TEST_PAYOUT_AMOUT 0x19 or PAYOUT_AMOUNT 0x58). This will allow a pre-test of the ability to float to the requested levels before actual float executes.',
-    example: `SSP.command('FLOAT_BY_DENOMINATION', {value: [{number: 1, denomination: 100, country_code: 'RUB'}, {number: 1, denomination: 500, country_code: 'RUB'}], test: false})`
+    example: 'SSP.command(\'FLOAT_BY_DENOMINATION\', {value: [{number: 1, denomination: 100, country_code: \'RUB\'}, {number: 1, denomination: 500, country_code: \'RUB\'}], test: false})'
   },
   SET_VALUE_REPORTING_TYPE: {
     code: 69,
@@ -308,7 +308,7 @@ module.exports = {
     args: true,
     device: ['NV11'],
     description: 'This will set the method of reporting values of notes. There are two options, by a four-byte value of the note or by the channel number of the value from the banknote validator. If the channel number is used then the actual value must be determined using the data from the Validator command Unit Data. The default operation is by 4-byte value. Send 0x00 to set Report by value, 0x01 to set Report By Channel.',
-    example: `SSP.command('SET_VALUE_REPORTING_TYPE', {reportBy: 'channel'}) // reportBy: value|channel`
+    example: 'SSP.command(\'SET_VALUE_REPORTING_TYPE\', {reportBy: \'channel\'}) // reportBy: value|channel'
   },
   PAYOUT_BY_DENOMINATION: {
     code: 70,
@@ -316,7 +316,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper', 'SMART Payout'],
     description: 'A command to payout the requested quantity of individual denominations. The quantities of denominations to pay are sent as a 2 byte little endian array; the money values as 4-byte little endian array and the country code as a 3-byte ASCII array. The host also adds an option byte to the end of the command array (TEST_PAYOUT_AMOUT 0x19 or PAYOUT_AMOUNT 0x58). This will allow a pre-test of the ability to payout the requested levels before actual payout executes.',
-    example: `SSP.command('PAYOUT_BY_DENOMINATION', {value: [{number: 1, denomination: 100, country_code: 'RUB'}, {number: 1, denomination: 500, country_code: 'RUB'}], test: false})`
+    example: 'SSP.command(\'PAYOUT_BY_DENOMINATION\', {value: [{number: 1, denomination: 100, country_code: \'RUB\'}, {number: 1, denomination: 500, country_code: \'RUB\'}], test: false})'
   },
   SET_COIN_MECH_GLOBAL_INHIBIT: {
     code: 73,
@@ -352,7 +352,7 @@ module.exports = {
     args: true,
     device: ['SMART Hopper', 'SMART Payout', 'NV11'],
     description: 'This command has two data bytes to allow communication speed to be set on a device. The first byte is the speed to change to (see table below).',
-    example: `SSP.command('SET_BAUD_RATE', {baudrate: 9600, reset_to_default_on_reset: true})`
+    example: 'SSP.command(\'SET_BAUD_RATE\', {baudrate: 9600, reset_to_default_on_reset: true})'
   },
   GET_BUILD_REVISION: {
     code: 79,
@@ -395,7 +395,7 @@ module.exports = {
     args: true,
     device: ['NV200'],
     description: 'This command allows the host to configure a supported BNV bezel. If the bezel is not supported the command will return generic response COMMAND NOT KNOWN 0xF2.',
-    example: `SSP.command('CONFIGURE_BEZEL', {RGB: '0000ff', volatile: true})`
+    example: 'SSP.command(\'CONFIGURE_BEZEL\', {RGB: \'0000ff\', volatile: true})'
   },
   POLL_WITH_ACK: {
     code: 86,
@@ -445,7 +445,7 @@ module.exports = {
     args: true,
     device: ['SMART Payout', 'NV11'],
     description: 'A command to enable the attached payout device for storing/paying out notes. A successful enable will return OK, If there is a problem the reply will be generic response COMMAND_CANNOT_BE_PROCESSED, followed by an error code.',
-    example: `SSP.command('ENABLE_PAYOUT_DEVICE', {REQUIRE_FULL_STARTUP: true, OPTIMISE_FOR_PAYIN_SPEED: true}) //nv11 args: GIVE_VALUE_ON_STORED|NO_HOLD_NOTE_ON_PAYOUT    Payout args: REQUIRE_FULL_STARTUP|OPTIMISE_FOR_PAYIN_SPEED`
+    example: 'SSP.command(\'ENABLE_PAYOUT_DEVICE\', {REQUIRE_FULL_STARTUP: true, OPTIMISE_FOR_PAYIN_SPEED: true}) //nv11 args: GIVE_VALUE_ON_STORED|NO_HOLD_NOTE_ON_PAYOUT    Payout args: REQUIRE_FULL_STARTUP|OPTIMISE_FOR_PAYIN_SPEED'
   },
   SET_FIXED_ENCRYPTION_KEY: {
     code: 96,
@@ -453,7 +453,7 @@ module.exports = {
     args: false,
     device: ['SMART Hopper', 'SMART Payout', 'NV11'],
     description: 'A command to allow the host to change the fixed part of the eSSP key. The eight data bytes are a 64 bit number representing the fixed part of the key. This command must be encrypted.',
-    example: `SSP.command('SET_FIXED_ENCRYPTION_KEY', { fixedKey: '0000000000000000' })`
+    example: 'SSP.command(\'SET_FIXED_ENCRYPTION_KEY\', { fixedKey: \'0000000000000000\' })'
   },
   RESET_FIXED_ENCRYPTION_KEY: {
     code: 97,
