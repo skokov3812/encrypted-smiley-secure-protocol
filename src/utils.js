@@ -351,7 +351,7 @@ function parseData(data, currentCommand, protocol_version) {
     }
 
 
-    else if(currentCommand == 'GET_ALL_LEVELS') {
+    else if(currentCommand == 'GET_BAR_CODE_READER_CONFIGURATION') {
       let status = {
         0: { 0: 'none', 1: 'Top reader fitted', 2: 'Bottom reader fitted', 3: 'both fitted'	},
         1: { 0: 'none', 1: 'top', 2: 'bottom', 3: 'both' },
