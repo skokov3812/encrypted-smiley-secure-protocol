@@ -2,9 +2,10 @@
   "name": "encrypted-smiley-secure-protocol",
   "version": "0.0.6",
   "description": "Node.JS library Encrypted Smiley ® Secure Protocol (eSSP, SSP)",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ./src"
   },
   "repository": {
     "type": "git",
@@ -32,5 +33,9 @@
     "int64-buffer": "^0.99.1007",
     "random-prime": "^1.0.0",
     "serialport": "^7.1.5"
+  },
+  "devDependencies": {
+    "eslint": "^7.8.1",
+    "eslint-plugin-node": "^11.1.0"
   }
 }
