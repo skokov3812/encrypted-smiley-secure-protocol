@@ -170,7 +170,7 @@ function parseData(data, currentCommand, protocolVersion) {
     if (currentCommand === 'REQUEST_KEY_EXCHANGE') {
       result.info.key = data;
     } else if (currentCommand === 'SETUP_REQUEST') {
-      result.info.unitType = unitType[data[0]];
+      result.info.unit_type = unitType[data[0]];
       result.info.firmware_version = (parseInt(Buffer.from(data.slice(1, 5)).toString()) / 100).toFixed(2);
       result.info.country_code = Buffer.from(data.slice(5, 8)).toString();
 
@@ -197,7 +197,7 @@ function parseData(data, currentCommand, protocolVersion) {
     } else if (currentCommand === 'GET_SERIAL_NUMBER') {
       result.info.serial_number = Buffer.from(data.slice(0, 4)).readInt32BE();
     } else if (currentCommand === 'UNIT_DATA') {
-      result.info.unitType = unitType[data[0]];
+      result.info.unit_type = unitType[data[0]];
       result.info.firmware_version = (parseInt(Buffer.from(data.slice(1, 5)).toString()) / 100).toFixed(2);
       result.info.country_code = Buffer.from(data.slice(5, 8)).toString();
       result.info.value_multiplier = parseInt(data.slice(8, 11).toString('hex'));
