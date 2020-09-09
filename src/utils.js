@@ -175,7 +175,7 @@ function parseData(data, currentCommand, protocolVersion) {
       result.info.country_code = Buffer.from(data.slice(5, 8)).toString();
 
       if (data[0] === 3) {
-        result.info.protocolVersion = parseInt(data.slice(8, 9).toString('hex'));
+        result.info.protocol_version = parseInt(data.slice(8, 9).toString('hex'));
         let n = parseInt(Buffer.from(data.slice(9, 10)).toString('hex'));
         result.info.coin_values = data.slice(10, 10 + (n * 2));
         result.info.country_codes_for_values = Buffer.from(data.slice(10 + (n * 2), 10 + (n * 2) + (n * 3))).toString().match(/.{3}/g);
@@ -185,8 +185,8 @@ function parseData(data, currentCommand, protocolVersion) {
         result.info.channel_value = data.slice(12, 12 + n);
         result.info.channel_security = data.slice(12 + n, 12 + (n * 2));
         result.info.real_value_multiplier = parseInt((12 + (n * 2), 12 + (n * 2) + 3).toString(16));
-        result.info.protocolVersion = parseInt(data.slice(15 + (n * 2), 15 + (n * 2) + 1).toString('hex'));
-        if (result.info.protocolVersion >= 6) {
+        result.info.protocol_version = parseInt(data.slice(15 + (n * 2), 15 + (n * 2) + 1).toString('hex'));
+        if (result.info.protocol_version >= 6) {
           result.info.expanded_channel_country_code = Buffer.from(data.slice(16 + (n * 2), 16 + (n * 2) + (n * 3))).toString().match(/.{3}/g);
           result.info.expanded_channel_value = [];
           for (let i = 0; i < n; i++) {
@@ -201,7 +201,7 @@ function parseData(data, currentCommand, protocolVersion) {
       result.info.firmware_version = (parseInt(Buffer.from(data.slice(1, 5)).toString()) / 100).toFixed(2);
       result.info.country_code = Buffer.from(data.slice(5, 8)).toString();
       result.info.value_multiplier = parseInt(data.slice(8, 11).toString('hex'));
-      result.info.protocolVersion = parseInt(data.slice(11, 12).toString('hex'));
+      result.info.protocol_version = parseInt(data.slice(11, 12).toString('hex'));
     } else if (currentCommand === 'CHANNEL_VALUE_REQUEST') {
       let count = data[0];
 
