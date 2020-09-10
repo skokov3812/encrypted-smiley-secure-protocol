@@ -395,16 +395,16 @@ function parseData(data, currentCommand, protocolVersion) {
               };
             }
           }
-        } else if (currentCommand === 'CASHBOX_PAYOUT_OPERATION_DATA') {
-          result.info = { res: {} };
-          console.log(data);
-          for (let i = 0; i < data[0]; i++) {
-            result.info.res[i] = {
-              quantity: Buffer.from(data.slice((i * 9) + 2, (i * 9) + 4)).readInt16LE(),
-              value: Buffer.from(data.slice((i * 9) + 4, (i * 9) + 8)).readInt32LE(),
-              country_code: Buffer.from(data.slice((i * 9) + 8, (i * 9) + 11)).toString()
-            };
-          }
+        }
+      } else if (currentCommand === 'CASHBOX_PAYOUT_OPERATION_DATA') {
+        result.info = { res: {} };
+        console.log(data);
+        for (let i = 0; i < data[0]; i++) {
+          result.info.res[i] = {
+            quantity: Buffer.from(data.slice((i * 9) + 2, (i * 9) + 4)).readInt16LE(),
+            value: Buffer.from(data.slice((i * 9) + 4, (i * 9) + 8)).readInt32LE(),
+            country_code: Buffer.from(data.slice((i * 9) + 8, (i * 9) + 11)).toString()
+          };
         }
       }
     }
