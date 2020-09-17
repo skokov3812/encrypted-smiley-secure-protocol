@@ -7,6 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint ./src ./example.js"
   },
+  "engines": {
+    "node": ">=10.4.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/skokov3812/encrypted-smiley-secure-protocol.git"
@@ -28,10 +31,8 @@
   "homepage": "https://github.com/skokov3812/encrypted-smiley-secure-protocol#readme",
   "dependencies": {
     "aes-js": "^3.1.2",
-    "big-integer": "^1.6.45",
+    "bigint-secrets": "^1.2.5",
     "chalk": "^2.4.2",
-    "int64-buffer": "^0.99.1007",
-    "random-prime": "^1.0.0",
     "serialport": "^7.1.5"
   },
   "devDependencies": {

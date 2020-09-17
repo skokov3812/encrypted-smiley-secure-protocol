@@ -1,10 +1,8 @@
 const SerialPort = require('serialport');
 const aesjs = require('aes-js');
-const { Int64LE } = require('int64-buffer');
-const bigInt = require('big-integer');
 const events = require('events');
-const randomPrime = require('random-prime').randomPrime;
-const { parseData, CRC16, randHexArray, argsToByte } = require('./utils');
+const bigintSecrets = require('bigint-secrets');
+const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils');
 const commandList = require('./command');
 const chalk = require('chalk');
 
@@ -117,14 +115,21 @@ module.exports = class SSP extends events {
   }
 
   initEncryption() {
-    this.keys.generatorKey = randomPrime(100000);
-    this.keys.modulusKey = randomPrime(this.keys.generatorKey);
-    this.keys.hostRandom = randomPrime(this.keys.modulusKey);
-    this.keys.hostIntKey = bigInt(this.keys.generatorKey).pow(this.keys.hostRandom).mod(this.keys.modulusKey);
-
-    return this.exec('SET_GENERATOR', Int64LE(this.keys.generatorKey).buffer)
-      .then(() => this.exec('SET_MODULUS', Int64LE(this.keys.modulusKey).buffer))
-      .then(() => this.exec('REQUEST_KEY_EXCHANGE', Int64LE(this.keys.hostIntKey).buffer))
+    return Promise.all([
+      bigintSecrets.prime(32),
+      bigintSecrets.prime(32),
+      bigintSecrets.randBetween(BigInt(2) ** BigInt(32))
+    ])
+      .then(res => {
+        this.keys.generatorKey = res[0];
+        this.keys.modulusKey = res[1];
+        this.keys.hostRandom = res[2];
+        this.keys.hostIntKey = this.keys.generatorKey ** this.keys.hostRandom % this.keys.modulusKey;
+        return;
+      })
+      .then(() => this.exec('SET_GENERATOR', int64LE(this.keys.generatorKey)))
+      .then(() => this.exec('SET_MODULUS', int64LE(this.keys.modulusKey)))
+      .then(() => this.exec('REQUEST_KEY_EXCHANGE', int64LE(this.keys.hostIntKey)))
       .then(() => {
         this.count = 0;
         return;
@@ -254,9 +259,9 @@ module.exports = class SSP extends events {
   }
   createHostEncryptionKeys(data) {
     if (this.keys.key === null) {
-      this.keys.slaveIntKey = bigInt(Int64LE(data).toString());
-      this.keys.key = this.keys.slaveIntKey.pow(this.keys.hostRandom).mod(this.keys.modulusKey);
-      this.encryptKey = Int64LE(this.keys.fixedKey, 16).buffer.concat(Int64LE(this.keys.key).buffer);
+      this.keys.slaveIntKey = data.readBigInt64LE();
+      this.keys.key = this.keys.slaveIntKey ** this.keys.hostRandom % this.keys.modulusKey;
+      this.encryptKey = int64LE(this.keys.fixedKey).concat(int64LE(this.keys.key));
       this.aesEncryption = new aesjs.ModeOfOperation.ecb(Buffer.from(this.encryptKey), null, 0);
       this.count = 0;
       if (this.debug) {
