@@ -259,7 +259,7 @@ module.exports = class SSP extends events {
   }
   createHostEncryptionKeys(data) {
     if (this.keys.key === null) {
-      this.keys.slaveIntKey = data.readBigInt64LE();
+      this.keys.slaveIntKey = Buffer.from(data).readBigInt64LE();
       this.keys.key = this.keys.slaveIntKey ** this.keys.hostRandom % this.keys.modulusKey;
       this.encryptKey = int64LE(this.keys.fixedKey).concat(int64LE(this.keys.key));
       this.aesEncryption = new aesjs.ModeOfOperation.ecb(Buffer.from(this.encryptKey), null, 0);
