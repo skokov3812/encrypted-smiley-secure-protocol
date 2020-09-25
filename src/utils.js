@@ -1,7 +1,6 @@
 const statusDesc = require('./status_desc');
 const unitType = require('./unit_type');
 const rejectNote = require('./reject_note');
-const { Int64LE } = require('int64-buffer');
 
 function randomInt(min, max) {
   return Math.floor(Math.random() * (max - min)) + min;
@@ -32,6 +31,12 @@ function randHexArray(length = 0) {
     array.push(randomInt(0, 255));
   }
   return array;
+}
+
+function int64LE(number) {
+  let buffer = Buffer.alloc(8);
+  buffer.writeBigInt64LE(BigInt(number));
+  return buffer;
 }
 
 function int32LE(number) {
@@ -144,7 +149,7 @@ function argsToByte(command, args, protocolVersion) {
       byte += args.NO_HOLD_NOTE_ON_PAYOUT || args.OPTIMISE_FOR_PAYIN_SPEED ? 2 : 0;
       return [byte];
     } else if (command === 'SET_FIXED_ENCRYPTION_KEY') {
-      return Int64LE(args.fixedKey, 16).buffer;
+      return int64LE(args.fixedKey);
     } else if (command === 'COIN_MECH_OPTIONS') {
       return [args.ccTalk ? 1 : 0];
     }
@@ -478,5 +483,6 @@ module.exports = {
   randomInt,
   CRC16,
   randHexArray,
-  argsToByte
+  argsToByte,
+  int64LE
 };
