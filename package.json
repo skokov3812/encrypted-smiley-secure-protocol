@@ -1,6 +1,6 @@
 {
   "name": "encrypted-smiley-secure-protocol",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Node.JS library Encrypted Smiley ® Secure Protocol (eSSP, SSP)",
   "main": "src/index.js",
   "scripts": {
