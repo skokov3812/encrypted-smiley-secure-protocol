@@ -190,8 +190,8 @@ function parseData(data, currentCommand, protocolVersion) {
         result.info.channel_value = data.slice(12, 12 + n);
         result.info.channel_security = data.slice(12 + n, 12 + (n * 2));
         result.info.real_value_multiplier = parseInt(Buffer.from(data.slice(12 + (n * 2), 12 + (n * 2) + 3)).toString('hex'), 16);
-        result.info.protocolVersion = parseInt(data.slice(15 + (n * 2), 15 + (n * 2) + 1).toString('hex'));
-        if (result.info.protocolVersion >= 6) {
+        result.info.protocol_version = parseInt(data.slice(15 + (n * 2), 15 + (n * 2) + 1).toString('hex'));
+        if (result.info.protocol_version >= 6) {
           result.info.expanded_channel_country_code = Buffer.from(data.slice(16 + (n * 2), 16 + (n * 2) + (n * 3))).toString().match(/.{3}/g);
           result.info.expanded_channel_value = [];
           for (let i = 0; i < n; i++) {
