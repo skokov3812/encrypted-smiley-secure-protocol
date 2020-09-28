@@ -5,6 +5,8 @@ const bigintCryptoUtils = require('bigint-crypto-utils');
 const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils');
 const commandList = require('./command');
 const chalk = require('chalk');
+const semver = require('semver');
+const pkg = require('../package.json');
 
 let eventEmitter = new events.EventEmitter();
 
@@ -12,6 +14,11 @@ let eventEmitter = new events.EventEmitter();
 module.exports = class SSP extends events {
   constructor(param) {
     super();
+
+    if (!semver.satisfies(process.version, pkg.engines.node)) {
+      throw new Error(`Version Node.js must be ${pkg.engines.node}`);
+    }
+
     this.debug = param.debug || false;
     this.id = param.id || 0;
     this.timeout = param.timeout || 3000;
