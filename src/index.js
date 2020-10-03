@@ -23,6 +23,7 @@ module.exports = class SSP extends events {
     this.id = param.id || 0;
     this.timeout = param.timeout || 3000;
     this.encryptAllCommand = param.encryptAllCommand || true;
+		this.throwOnFailure = param.throwOnFailure;
     this.keys = {
       fixedKey: param.fixedKey || '0123456701234567',
       generatorKey: null,
@@ -192,6 +193,9 @@ module.exports = class SSP extends events {
       resolve(this.newEvent(command));
     })
       .then(res => {
+        if(res && !res.success && this.throwOnFailure) { 
+					throw new Error(JSON.stringify(res))
+				}
         return res.status === 'TIMEOUT' ? this.exec(command, args) : res;
       });
   }

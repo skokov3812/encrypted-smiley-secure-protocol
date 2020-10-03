@@ -13,7 +13,8 @@ let eSSP = new SspLib({
   debug: false, // default: false
   timeout: 5000, // default: 3000
   encryptAllCommand: true, // default: true
-  fixedKey: '0000000000000000' // default: '0123456701234567'
+  fixedKey: '0000000000000000', // default: '0123456701234567'
+  throwOnFailure: true
 });
 
 
