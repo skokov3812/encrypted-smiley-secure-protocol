@@ -289,7 +289,7 @@ module.exports = class SSP extends events {
       .then(res => {
         if (res.status === 'OK') {
           this.enabled = true;
-          this.poll(true);
+          if (!this.polling) this.poll(true);
         }
         return res;
       });
@@ -317,7 +317,8 @@ module.exports = class SSP extends events {
         .then(() => this.exec(command, argsToByte(command, args, this.protocol_version)))
         .then(res => {
           result = res;
-          return this.poll(true);
+          if (!this.polling) return this.poll(true);
+          return () => {};
         })
         .then(() => result);
     }
