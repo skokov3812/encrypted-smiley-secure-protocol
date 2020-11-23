@@ -127,7 +127,7 @@ GET_BAR_CODE_DATA					|			|	optional	|	Command to obtain last valid bar code tic
 COMMUNICATION_PASS_THROUGH			|			|	optional	|	Used with SMART Hopper only. This command sets USB pass through mode.
 HALT_PAYOUT							|			|	**yes**		|	A command to stop the execution of an existing payout.
 [SET_DENOMINATION_ROUTE](#SET_DENOMINATION_ROUTE)				|	**yes**	|	optional	|	This command will configure the denomination to be either routed to the cashbox on detection or stored to be made available for later possible payout. Possible value: route[payout/cashbox]
-GET_DENOMINATION_ROUTE				|			|	**yes**		|	This command allows the host to determine the route of a denomination.
+[GET_DENOMINATION_ROUTE](#GET_DENOMINATION_ROUTE)				|			|	**yes**		|	This command allows the host to determine the route of a denomination.
 [FLOAT_AMOUNT](#FLOAT_AMOUNT)									|	**yes**	|	optional	|	A command to float the hopper unit to leave a requested value of money, with a requested minimum possible payout level. All monies not required to meet float value are routed to cashbox.
 GET_MINIMUM_PAYOUT					|			|	**yes**		|	A command to request the minimum possible payout amount that this device can provide
 EMPTY_ALL							|			|	**yes**		|	This command will direct all stored monies to the cash box without reporting any value and reset all the stored counters to zero.
@@ -225,6 +225,15 @@ eSSP.command('GET_DENOMINATION_LEVEL', {
 ```js
 eSSP.command('SET_DENOMINATION_ROUTE', {
     route: 'payout', // payout|cashbox
+    value: 10000,
+    country_code: 'RUB'
+})
+```
+
+###### GET_DENOMINATION_ROUTE
+```js
+eSSP.command('GET_DENOMINATION_ROUTE', {
+    isHopper: false, // true/false
     value: 10000,
     country_code: 'RUB'
 })
