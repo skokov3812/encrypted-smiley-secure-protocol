@@ -1,6 +1,6 @@
 const SerialPort = require('serialport');
 const aesjs = require('aes-js');
-const events = require('events');
+const EventEmitter = require('events');
 const bigintCryptoUtils = require('bigint-crypto-utils');
 const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils');
 const commandList = require('./command');
@@ -8,16 +8,15 @@ const chalk = require('chalk');
 const semver = require('semver');
 const pkg = require('../package.json');
 
-let eventEmitter = new events.EventEmitter();
-
-
-module.exports = class SSP extends events {
+module.exports = class SSP extends EventEmitter {
   constructor(param) {
     super();
 
     if (!semver.satisfies(process.version, pkg.engines.node)) {
       throw new Error(`Version Node.js must be ${pkg.engines.node}`);
     }
+
+    this.eventEmitter = new EventEmitter();
 
     this.debug = param.debug || false;
     this.id = param.id || 0;
@@ -102,7 +101,7 @@ module.exports = class SSP extends events {
           if (tmpBuffer.length >= tmpBuffer[2] + 5 + double7F) {
             if (this.debug) { console.log('COM ->', chalk.yellow(Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F)).toString('hex')), chalk.green(this.currentCommand)); }
 
-            eventEmitter.emit(this.currentCommand, Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F).join(',').replace(/,127,127/g, ',127').split(','), tmpBuffer[2]));
+            this.eventEmitter.emit(this.currentCommand, Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F).join(',').replace(/,127,127/g, ',127').split(','), tmpBuffer[2]));
             tmpBuffer = tmpBuffer.slice(tmpBuffer[2] + 5 + double7F);
           }
         });
@@ -199,7 +198,7 @@ module.exports = class SSP extends events {
   newEvent(command) {
     return new Promise((resolve) => {
       let timeout = true;
-      eventEmitter.once(command, buffer => {
+      this.eventEmitter.once(command, buffer => {
         timeout = false;
         if (Buffer.isBuffer(buffer)) {
           resolve(this.parsePacket(buffer));
@@ -217,7 +216,7 @@ module.exports = class SSP extends events {
 
       setTimeout(() => {
         if (timeout) {
-          eventEmitter.emit(this.currentCommand, 'TIMEOUT');
+          this.eventEmitter.emit(this.currentCommand, 'TIMEOUT');
           this.currentCommand = null;
         }
       }, parseInt(this.timeout));
@@ -341,7 +340,7 @@ module.exports = class SSP extends events {
           if (this.polling) {
             this.poll();
           } else {
-            eventEmitter.emit('POLL_STOP');
+            this.eventEmitter.emit('POLL_STOP');
           }
           return;
         });
@@ -349,7 +348,7 @@ module.exports = class SSP extends events {
     if (this.polling !== false) {
       this.polling = false;
       return new Promise((resolve) => {
-        eventEmitter.once('POLL_STOP', () => {
+        this.eventEmitter.once('POLL_STOP', () => {
           resolve();
         });
       });
