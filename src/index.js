@@ -1,6 +1,6 @@
 const SerialPort = require('serialport');
 const aesjs = require('aes-js');
-const events = require('events');
+const EventEmitter = require('events');
 const bigintCryptoUtils = require('bigint-crypto-utils');
 const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils');
 const commandList = require('./command');
@@ -8,16 +8,15 @@ const chalk = require('chalk');
 const semver = require('semver');
 const pkg = require('../package.json');
 
-let eventEmitter = new events.EventEmitter();
-
-
-module.exports = class SSP extends events {
+module.exports = class SSP extends EventEmitter {
   constructor(param) {
     super();
 
     if (!semver.satisfies(process.version, pkg.engines.node)) {
       throw new Error(`Version Node.js must be ${pkg.engines.node}`);
     }
+
+    this.eventEmitter = new EventEmitter();
 
     this.debug = param.debug || false;
     this.id = param.id || 0;
@@ -69,7 +68,7 @@ module.exports = class SSP extends events {
         this.port.on('data', buffer => {
           let tmpArray = [...buffer];
 
-          if (this.debug) {console.log('COM ->', chalk.gray(buffer.toString('hex')), '| RAW');}
+          if (this.debug) { console.log('COM ->', chalk.gray(buffer.toString('hex')), '| RAW'); }
 
           if (tmpBuffer.length === 1) {
             if ((tmpArray[0] === this.id | 0x80) || (tmpArray[0] === this.id | 0x00)) {
@@ -100,9 +99,9 @@ module.exports = class SSP extends events {
           let double7F = (tmpBuffer.join(',').match(/,127,127/g) || []).length;
 
           if (tmpBuffer.length >= tmpBuffer[2] + 5 + double7F) {
-            if (this.debug) {console.log('COM ->', chalk.yellow(Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F)).toString('hex')), chalk.green(this.currentCommand));}
+            if (this.debug) { console.log('COM ->', chalk.yellow(Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F)).toString('hex')), chalk.green(this.currentCommand)); }
 
-            eventEmitter.emit(this.currentCommand, Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F).join(',').replace(/,127,127/g, ',127').split(','), tmpBuffer[2]));
+            this.eventEmitter.emit(this.currentCommand, Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F).join(',').replace(/,127,127/g, ',127').split(','), tmpBuffer[2]));
             tmpBuffer = tmpBuffer.slice(tmpBuffer[2] + 5 + double7F);
           }
         });
@@ -147,7 +146,7 @@ module.exports = class SSP extends events {
     let STX = 0x7F;
     let STEX = 0x7E;
 
-    if (commandList[command].args && args.length === 0) {throw new Error('args missings');}
+    if (commandList[command].args && args.length === 0) { throw new Error('args missings'); }
 
     let LENGTH = args.length + 1;
     let SEQ_SLAVE_ID = this.getSequence();
@@ -160,7 +159,7 @@ module.exports = class SSP extends events {
       let eCommandLine = [DATA.length].concat([...eCOUNT], DATA);
       let ePACKING = randHexArray(Math.ceil((eCommandLine.length + 2) / 16) * 16 - (eCommandLine.length + 2));
       eCommandLine = eCommandLine.concat(ePACKING);
-      eCommandLine = eCommandLine.concat( CRC16(eCommandLine) );
+      eCommandLine = eCommandLine.concat(CRC16(eCommandLine));
 
       let eDATA = [...this.aesEncryption.encrypt(eCommandLine)];
 
@@ -171,14 +170,14 @@ module.exports = class SSP extends events {
     let tmp = [SEQ_SLAVE_ID].concat(LENGTH, DATA);
     let comandLine = Buffer.from([STX].concat(tmp, CRC16(tmp)).join(',').replace(/,127/g, ',127,127').split(','));
 
-    if (this.debug) {console.log('COM <-', chalk.cyan(comandLine.toString('hex')), chalk.green(this.currentCommand), this.count);}
+    if (this.debug) { console.log('COM <-', chalk.cyan(comandLine.toString('hex')), chalk.green(this.currentCommand), this.count); }
 
     return comandLine;
   }
 
   exec(command, args = []) {
     command = command.toUpperCase();
-    if (commandList[command] === undefined) {throw new Error('command not found');}
+    if (commandList[command] === undefined) { throw new Error('command not found'); }
 
     this.currentCommand = command;
     let buffer = Buffer.from(this.getPacket(command, args));
@@ -187,7 +186,7 @@ module.exports = class SSP extends events {
       this.port.write(buffer, () => {
         this.port.drain();
 
-        if (command === 'SYNC') {this.sequence = 0x80;}
+        if (command === 'SYNC') { this.sequence = 0x80; }
       });
       resolve(this.newEvent(command));
     })
@@ -199,12 +198,12 @@ module.exports = class SSP extends events {
   newEvent(command) {
     return new Promise((resolve) => {
       let timeout = true;
-      eventEmitter.once(command, buffer => {
+      this.eventEmitter.once(command, buffer => {
         timeout = false;
         if (Buffer.isBuffer(buffer)) {
           resolve(this.parsePacket(buffer));
         } else if (buffer === 'TIMEOUT') {
-          if (this.debug) {console.log(chalk.red('TIMEOUT ' + command));}
+          if (this.debug) { console.log(chalk.red('TIMEOUT ' + command)); }
 
           resolve({
             success: false,
@@ -217,7 +216,7 @@ module.exports = class SSP extends events {
 
       setTimeout(() => {
         if (timeout) {
-          eventEmitter.emit(this.currentCommand, 'TIMEOUT');
+          this.eventEmitter.emit(this.currentCommand, 'TIMEOUT');
           this.currentCommand = null;
         }
       }, parseInt(this.timeout));
@@ -241,7 +240,7 @@ module.exports = class SSP extends events {
       }
       if (this.keys.key !== null && DATA[0] === 0x7E) {
         DATA = this.aesEncryption.decrypt(Buffer.from(DATA.slice(1)));
-        if (this.debug) {console.log('Decrypted:', chalk.red(Buffer.from(DATA).toString('hex')));}
+        if (this.debug) { console.log('Decrypted:', chalk.red(Buffer.from(DATA).toString('hex'))); }
         let eLENGTH = DATA[0];
         let eCOUNT = Buffer.from(DATA.slice(1, 5)).readInt32LE();
         DATA = DATA.slice(5, eLENGTH + 5);
@@ -276,7 +275,7 @@ module.exports = class SSP extends events {
       this.aesEncryption = new aesjs.ModeOfOperation.ecb(this.encryptKey, null, 0);
       this.count = 0;
       if (this.debug) {
-        console.log('AES encrypt key:', chalk.red('0x' + Buffer.from(this.encryptKey).toString('hex')) );
+        console.log('AES encrypt key:', chalk.red('0x' + Buffer.from(this.encryptKey).toString('hex')));
         console.log('');
         console.log(this.keys);
         console.log('');
@@ -318,7 +317,7 @@ module.exports = class SSP extends events {
         .then(res => {
           result = res;
           if (!this.polling) return this.poll(true);
-          return () => {};
+          return () => { };
         })
         .then(() => result);
     }
@@ -341,7 +340,7 @@ module.exports = class SSP extends events {
           if (this.polling) {
             this.poll();
           } else {
-            eventEmitter.emit('POLL_STOP');
+            this.eventEmitter.emit('POLL_STOP');
           }
           return;
         });
@@ -349,7 +348,7 @@ module.exports = class SSP extends events {
     if (this.polling !== false) {
       this.polling = false;
       return new Promise((resolve) => {
-        eventEmitter.once('POLL_STOP', () => {
+        this.eventEmitter.once('POLL_STOP', () => {
           resolve();
         });
       });
