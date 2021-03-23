@@ -311,96 +311,119 @@ function parseData(data, currentCommand, protocolVersion) {
       result.info.cashBoxPayAcive = (tmp[3] === 0 || tmp[3] === undefined) ? false : true;
     } else if (currentCommand === 'POLL' || currentCommand === 'POLL_WITH_ACK') {
       if (data[0] !== undefined && statusDesc[data[0]] !== undefined) {
-        result.info.code = data[0];
-        result.info.name = statusDesc[data[0]].name;
-        result.info.description = statusDesc[data[0]].description;
+        result.info = [];
 
+        const indexes = [];
+        const events = [];
 
-        if (result.info.name === 'READ_NOTE' ||
-          result.info.name === 'CREDIT_NOTE' ||
-          result.info.name === 'NOTE_CLEARED_FROM_FRONT' ||
-          result.info.name === 'NOTE_CLEARED_TO_CASHBOX'
-        ) {
-          result.info.channel = data[1];
-        } else if (result.info.name === 'FRAUD_ATTEMPT') {
-          if (data.length === 2) {
-            result.info.channel = data[1];
-          } else if (data.length === 5) {
-            result.info.value = Buffer.from(data.slice(1, 5)).readInt32LE();
-          } else {
-            let count = Math.floor(data.length / 6);
-            result.info.value = [];
-            for (let i = 0; i < count; i++) {
-              result.info.value[i] = {
-                value: Buffer.from(data.slice((i * 7) + 1, (i * 7) + 5)).readInt32LE(),
-                country_code: Buffer.from(data.slice((i * 7) + 5, (i * 7) + 8)).toString()
-              };
-            }
+        data.forEach((d, i) => {
+          if (statusDesc[d]) {
+            indexes.push(i);
           }
-        } else if (result.info.name === 'DISPENSING' ||
-          result.info.name === 'DISPENSED' ||
-          result.info.name === 'JAMMED' ||
-          result.info.name === 'HALTED' ||
-          result.info.name === 'FLOATING' ||
-          result.info.name === 'FLOATED' ||
-          result.info.name === 'TIME_OUT' ||
-          result.info.name === 'CASHBOX_PAID' ||
-          result.info.name === 'COIN_CREDIT' ||
-          result.info.name === 'SMART_EMPTYING' ||
-          result.info.name === 'SMART_EMPTIED' ||
-          result.info.name === 'ERROR_DURING_PAYOUT' ||
-          result.info.name === 'NOTE_TRANSFERED_TO_STACKER' ||
-          result.info.name === 'NOTE_HELD_IN_BEZEL' ||
-          result.info.name === 'NOTE_PAID_INTO_STORE_AT_POWER-UP' ||
-          result.info.name === 'NOTE_PAID_INTO_STACKER_AT_POWER-UP' ||
-          result.info.name === 'NOTE_DISPENSED_AT_POWER-UP'
-        ) {
-          if (protocolVersion >= 6) {
-            let count = data[1];
-            result.info.value = [];
-            for (let i = 0; i < count; i++) {
-              result.info.value[i] = {
-                value: Buffer.from(data.slice((i * 7) + 2, (i * 7) + 6)).readInt32LE(),
-                country_code: Buffer.from(data.slice((i * 7) + 6, (i * 7) + 9)).toString()
-              };
-            }
-            if (result.info.name === 'ERROR_DURING_PAYOUT') {
-              result.info.errorCode = data[(count * 7) + 1] === 0 ? 'wrong_recognition' : 'jammed';
-            }
-          } else {
-            result.info.value = Buffer.from(data.slice(0, 4)).readInt32LE();
-          }
-        } else if (result.info.name === 'INCOMPLETE_PAYOUT') {
-          if (data.length === 9) {
-            result.info.dispensed = Buffer.from(data.slice(1, 5)).readInt32LE();
-            result.info.requested = Buffer.from(data.slice(5, 9)).readInt32LE();
-          } else {
-            let count = Math.floor(data.length / 11);
-            result.info.value = [];
-            for (let i = 0; i < count; i++) {
-              result.info.value[i] = {
-                dispensed: Buffer.from(data.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
-                requested: Buffer.from(data.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
-                country_code: Buffer.from(data.slice((i * 11) + 9, (i * 11) + 12)).toString()
-              };
-            }
-          }
-        } else if (result.info.name === 'INCOMPLETE_FLOAT') {
-          if (data.length === 9) {
-            result.info.dispensed = Buffer.from(data.slice(1, 5)).readInt32LE();
-            result.info.floated = Buffer.from(data.slice(5, 9)).readInt32LE();
-          } else {
-            let count = Math.floor(data.length / 11);
-            result.info.value = [];
-            for (let i = 0; i < count; i++) {
-              result.info.value[i] = {
-                floated: Buffer.from(data.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
-                requested: Buffer.from(data.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
-                country_code: Buffer.from(data.slice((i * 11) + 9, (i * 11) + 12)).toString()
-              };
-            }
+        });
+
+        for (let i = 0; i < indexes.length; i += 1) {
+          const start = indexes[i];
+          const end = indexes[i + 1] || (data.length);
+          if (start !== end) {
+            events.push(data.slice(start, end));
           }
         }
+
+        events.forEach((data) => {
+          const info = {};
+          info.code = data[0];
+          info.name = statusDesc[data[0]].name;
+          info.description = statusDesc[data[0]].description;
+
+          if (info.name === 'READ_NOTE' ||
+            info.name === 'CREDIT_NOTE' ||
+            info.name === 'NOTE_CLEARED_FROM_FRONT' ||
+            info.name === 'NOTE_CLEARED_TO_CASHBOX'
+          ) {
+            info.channel = data[1];
+          } else if (info.name === 'FRAUD_ATTEMPT') {
+            if (data.length === 2) {
+              info.channel = data[1];
+            } else if (data.length === 5) {
+              info.value = Buffer.from(data.slice(1, 5)).readInt32LE();
+            } else {
+              let count = Math.floor(data.length / 6);
+              info.value = [];
+              for (let i = 0; i < count; i++) {
+                info.value[i] = {
+                  value: Buffer.from(data.slice((i * 7) + 1, (i * 7) + 5)).readInt32LE(),
+                  country_code: Buffer.from(data.slice((i * 7) + 5, (i * 7) + 8)).toString()
+                };
+              }
+            }
+          } else if (info.name === 'DISPENSING' ||
+            info.name === 'DISPENSED' ||
+            info.name === 'JAMMED' ||
+            info.name === 'HALTED' ||
+            info.name === 'FLOATING' ||
+            info.name === 'FLOATED' ||
+            info.name === 'TIME_OUT' ||
+            info.name === 'CASHBOX_PAID' ||
+            info.name === 'COIN_CREDIT' ||
+            info.name === 'SMART_EMPTYING' ||
+            info.name === 'SMART_EMPTIED' ||
+            info.name === 'ERROR_DURING_PAYOUT' ||
+            info.name === 'NOTE_TRANSFERED_TO_STACKER' ||
+            info.name === 'NOTE_HELD_IN_BEZEL' ||
+            info.name === 'NOTE_PAID_INTO_STORE_AT_POWER-UP' ||
+            info.name === 'NOTE_PAID_INTO_STACKER_AT_POWER-UP' ||
+            info.name === 'NOTE_DISPENSED_AT_POWER-UP'
+          ) {
+            if (protocolVersion >= 6) {
+              let count = data[1];
+              info.value = [];
+              for (let i = 0; i < count; i++) {
+                info.value[i] = {
+                  value: Buffer.from(data.slice((i * 7) + 2, (i * 7) + 6)).readInt32LE(),
+                  country_code: Buffer.from(data.slice((i * 7) + 6, (i * 7) + 9)).toString()
+                };
+              }
+              if (info.name === 'ERROR_DURING_PAYOUT') {
+                info.errorCode = data[(count * 7) + 1] === 0 ? 'wrong_recognition' : 'jammed';
+              }
+            } else {
+              info.value = Buffer.from(data.slice(0, 4)).readInt32LE();
+            }
+          } else if (info.name === 'INCOMPLETE_PAYOUT') {
+            if (data.length === 9) {
+              info.dispensed = Buffer.from(data.slice(1, 5)).readInt32LE();
+              info.requested = Buffer.from(data.slice(5, 9)).readInt32LE();
+            } else {
+              let count = Math.floor(data.length / 11);
+              info.value = [];
+              for (let i = 0; i < count; i++) {
+                info.value[i] = {
+                  dispensed: Buffer.from(data.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
+                  requested: Buffer.from(data.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
+                  country_code: Buffer.from(data.slice((i * 11) + 9, (i * 11) + 12)).toString()
+                };
+              }
+            }
+          } else if (info.name === 'INCOMPLETE_FLOAT') {
+            if (data.length === 9) {
+              info.dispensed = Buffer.from(data.slice(1, 5)).readInt32LE();
+              info.floated = Buffer.from(data.slice(5, 9)).readInt32LE();
+            } else {
+              let count = Math.floor(data.length / 11);
+              info.value = [];
+              for (let i = 0; i < count; i++) {
+                info.value[i] = {
+                  floated: Buffer.from(data.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
+                  requested: Buffer.from(data.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
+                  country_code: Buffer.from(data.slice((i * 11) + 9, (i * 11) + 12)).toString()
+                };
+              }
+            }
+          }
+
+          result.info.push(info);
+        });
       } else if (currentCommand === 'CASHBOX_PAYOUT_OPERATION_DATA') {
         result.info = { res: {} };
         console.log(data);
