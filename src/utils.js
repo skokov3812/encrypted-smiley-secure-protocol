@@ -417,12 +417,12 @@ function parseData(data, currentCommand, protocolVersion) {
     if (result.status === 'COMMAND_CANNOT_BE_PROCESSED' && currentCommand === 'ENABLE_PAYOUT_DEVICE') {
       result.info.errorCode = data[1];
       switch (data[1]) {
-      case 1: result.info.error = 'No device connected'; break;
-      case 2: result.info.error = 'Invalid currency detected'; break;
-      case 3: result.info.error = 'Device busy'; break;
-      case 4: result.info.error = 'Empty only (Note float only)'; break;
-      case 5: result.info.error = 'Device error'; break;
-      default: result.info.error = 'Unknown error'; break;
+        case 1: result.info.error = 'No device connected'; break;
+        case 2: result.info.error = 'Invalid currency detected'; break;
+        case 3: result.info.error = 'Device busy'; break;
+        case 4: result.info.error = 'Empty only (Note float only)'; break;
+        case 5: result.info.error = 'Device error'; break;
+        default: result.info.error = 'Unknown error'; break;
       }
     } else if (result.status === 'COMMAND_CANNOT_BE_PROCESSED' && (
       currentCommand === 'PAYOUT_BY_DENOMINATION' ||
@@ -431,11 +431,11 @@ function parseData(data, currentCommand, protocolVersion) {
     )) {
       result.info.errorCode = data[1];
       switch (data[1]) {
-      case 1: result.info.error = 'Not enough value in device'; break;
-      case 2: result.info.error = 'Cannot pay exact amount'; break;
-      case 3: result.info.error = 'Device busy'; break;
-      case 4: result.info.error = 'Device disabled'; break;
-      default: result.info.error = 'Unknown error'; break;
+        case 1: result.info.error = 'Not enough value in device'; break;
+        case 2: result.info.error = 'Cannot pay exact amount'; break;
+        case 3: result.info.error = 'Device busy'; break;
+        case 4: result.info.error = 'Device disabled'; break;
+        default: result.info.error = 'Unknown error'; break;
       }
     } else if (result.status === 'COMMAND_CANNOT_BE_PROCESSED' && (
       currentCommand === 'SET_VALUE_REPORTING_TYPE' ||
@@ -444,28 +444,28 @@ function parseData(data, currentCommand, protocolVersion) {
     )) {
       result.info.errorCode = data[1];
       switch (data[1]) {
-      case 1: result.info.error = 'No payout connected'; break;
-      case 2: result.info.error = 'Invalid currency detected'; break;
-      case 3: result.info.error = 'Payout device error'; break;
-      default: result.info.error = 'Unknown error'; break;
+        case 1: result.info.error = 'No payout connected'; break;
+        case 2: result.info.error = 'Invalid currency detected'; break;
+        case 3: result.info.error = 'Payout device error'; break;
+        default: result.info.error = 'Unknown error'; break;
       }
     } else if (result.status === 'COMMAND_CANNOT_BE_PROCESSED' && currentCommand === 'FLOAT_BY_DENOMINATION') {
       result.info.errorCode = data[1];
       switch (data[1]) {
-      case 1: result.info.error = 'Not enough value in device'; break;
-      case 2: result.info.error = 'Cannot pay exact amount'; break;
-      case 3: result.info.error = 'Device busy'; break;
-      case 4: result.info.error = 'Device disabled'; break;
-      default: result.info.error = 'Unknown error'; break;
+        case 1: result.info.error = 'Not enough value in device'; break;
+        case 2: result.info.error = 'Cannot pay exact amount'; break;
+        case 3: result.info.error = 'Device busy'; break;
+        case 4: result.info.error = 'Device disabled'; break;
+        default: result.info.error = 'Unknown error'; break;
       }
     } else if (result.status === 'COMMAND_CANNOT_BE_PROCESSED' && (currentCommand === 'STACK_NOTE' || currentCommand === 'PAYOUT_NOTE')) {
       result.info.errorCode = data[1];
       switch (data[1]) {
-      case 1: result.info.error = 'Note float unit not connected'; break;
-      case 2: result.info.error = 'Note float empty'; break;
-      case 3: result.info.error = 'Note float busy'; break;
-      case 4: result.info.error = 'Note float disabled'; break;
-      default: result.info.error = 'Unknown error'; break;
+        case 1: result.info.error = 'Note float unit not connected'; break;
+        case 2: result.info.error = 'Note float empty'; break;
+        case 3: result.info.error = 'Note float busy'; break;
+        case 4: result.info.error = 'Note float disabled'; break;
+        default: result.info.error = 'Unknown error'; break;
       }
     } else if (result.status === 'COMMAND_CANNOT_BE_PROCESSED' && currentCommand === 'GET_NOTE_POSITIONS') {
       result.info.errorCode = data[1];

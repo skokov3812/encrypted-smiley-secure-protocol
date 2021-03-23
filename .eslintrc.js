@@ -91,7 +91,7 @@ module.exports = {
     "no-sequences": 2,               // http://eslint.org/docs/rules/no-sequences
     "no-throw-literal": 2,           // http://eslint.org/docs/rules/no-throw-literal
     "no-with": 2,                    // http://eslint.org/docs/rules/no-with
-    // "radix": 2,                      // http://eslint.org/docs/rules/radix
+    // "radix": 2,                   // http://eslint.org/docs/rules/radix
     "vars-on-top": 0,                // http://eslint.org/docs/rules/vars-on-top
     "wrap-iife": [2, "any"],         // http://eslint.org/docs/rules/wrap-iife
     "yoda": 2,                       // http://eslint.org/docs/rules/yoda
@@ -99,7 +99,8 @@ module.exports = {
     /**
      * Style
      */
-    "indent": [2, 2],                // http://eslint.org/docs/rules/indent
+    "indent": [2, 2, { "SwitchCase": 1 }],                // http://eslint.org/docs/rules/indent
+    "block-spacing": 2,              // https://eslint.org/docs/rules/block-spacing
     "brace-style": [2,               // http://eslint.org/docs/rules/brace-style
       "1tbs", {
         "allowSingleLine": true
@@ -134,6 +135,7 @@ module.exports = {
     "no-trailing-spaces": 2,         // http://eslint.org/docs/rules/no-trailing-spaces
     "no-extra-parens": [2, "functions"], // http://eslint.org/docs/rules/no-extra-parens
     "no-underscore-dangle": 0,       // http://eslint.org/docs/rules/no-underscore-dangle
+    "object-curly-spacing": [2, "always"],       // https://eslint.org/docs/rules/object-curly-spacing
     "one-var": [2, "never"],         // http://eslint.org/docs/rules/one-var
     "padded-blocks": [2, "never"],   // http://eslint.org/docs/rules/padded-blocks
     "semi": [2, "always"],           // http://eslint.org/docs/rules/semi
@@ -141,10 +143,11 @@ module.exports = {
       "before": false,
       "after": true
     }],
-    "keyword-spacing": 2,       // http://eslint.org/docs/rules/keyword-spacing
+    "keyword-spacing": 2,            // http://eslint.org/docs/rules/keyword-spacing
     "space-before-blocks": 2,        // http://eslint.org/docs/rules/space-before-blocks
     "space-before-function-paren": [2, "never"], // http://eslint.org/docs/rules/space-before-function-paren
     "space-infix-ops": 2,            // http://eslint.org/docs/rules/space-infix-ops
+    "space-in-parens": 2,            // https://eslint.org/docs/rules/space-in-parens
     "spaced-comment": [2, "always", {// http://eslint.org/docs/rules/spaced-comment
       "markers": ["global", "eslint"]
     }]
