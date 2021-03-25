@@ -160,7 +160,7 @@ function argsToByte(command, args, protocolVersion) {
   return [];
 }
 
-function parseData(data, currentCommand, protocolVersion) {
+function parseData(data, currentCommand, protocolVersion, deviceUnitType) {
   let result = {
     success: data[0] === 0xF0,
     status: statusDesc[data[0]] !== undefined ? statusDesc[data[0]].name : 'UNDEFINED',
@@ -313,49 +313,47 @@ function parseData(data, currentCommand, protocolVersion) {
       if (data[0] !== undefined && statusDesc[data[0]] !== undefined) {
         result.info = [];
 
-        const indexes = [];
-        const events = [];
+        let k = 0;
+        while (k < data.length) {
+          const el = data[k];
 
-        data.forEach((d, i) => {
-          if (statusDesc[d]) {
-            indexes.push(i);
+          if (!statusDesc[el]) {
+            k += 1;
+            continue;
           }
-        });
 
-        for (let i = 0; i < indexes.length; i += 1) {
-          const start = indexes[i];
-          const end = indexes[i + 1] || (data.length);
-          if (start !== end) {
-            events.push(data.slice(start, end));
-          }
-        }
+          const chunk = data.slice(k, data.length);
 
-        events.forEach((data) => {
           const info = {};
-          info.code = data[0];
-          info.name = statusDesc[data[0]].name;
-          info.description = statusDesc[data[0]].description;
+          info.code = chunk[0];
+          info.name = statusDesc[chunk[0]].name;
+          info.description = statusDesc[chunk[0]].description;
 
           if (info.name === 'READ_NOTE' ||
             info.name === 'CREDIT_NOTE' ||
             info.name === 'NOTE_CLEARED_FROM_FRONT' ||
             info.name === 'NOTE_CLEARED_TO_CASHBOX'
           ) {
-            info.channel = data[1];
+            info.channel = chunk[1];
+            k += 2;
           } else if (info.name === 'FRAUD_ATTEMPT') {
-            if (data.length === 2) {
-              info.channel = data[1];
-            } else if (data.length === 5) {
-              info.value = Buffer.from(data.slice(1, 5)).readInt32LE();
-            } else {
-              let count = Math.floor(data.length / 6);
+            const smartDevice = [unitType[3], unitType[6]].includes(deviceUnitType);
+            if (protocolVersion >= 6 && smartDevice) {
+              let count = Math.floor(chunk.length / 6);
               info.value = [];
               for (let i = 0; i < count; i++) {
                 info.value[i] = {
-                  value: Buffer.from(data.slice((i * 7) + 1, (i * 7) + 5)).readInt32LE(),
-                  country_code: Buffer.from(data.slice((i * 7) + 5, (i * 7) + 8)).toString()
+                  value: Buffer.from(chunk.slice((i * 7) + 1, (i * 7) + 5)).readInt32LE(),
+                  country_code: Buffer.from(chunk.slice((i * 7) + 5, (i * 7) + 8)).toString()
                 };
               }
+              k += 1 + count * 7;
+            } else if (protocolVersion < 6 && smartDevice) {
+              info.value = Buffer.from(chunk.slice(1, 5)).readInt32LE();
+              k += 5;
+            } else {
+              info.channel = chunk[1];
+              k += 2;
             }
           } else if (info.name === 'DISPENSING' ||
             info.name === 'DISPENSED' ||
@@ -370,60 +368,75 @@ function parseData(data, currentCommand, protocolVersion) {
             info.name === 'SMART_EMPTIED' ||
             info.name === 'ERROR_DURING_PAYOUT' ||
             info.name === 'NOTE_TRANSFERED_TO_STACKER' ||
-            info.name === 'NOTE_HELD_IN_BEZEL' ||
             info.name === 'NOTE_PAID_INTO_STORE_AT_POWER-UP' ||
             info.name === 'NOTE_PAID_INTO_STACKER_AT_POWER-UP' ||
             info.name === 'NOTE_DISPENSED_AT_POWER-UP'
           ) {
             if (protocolVersion >= 6) {
-              let count = data[1];
+              let count = chunk[1];
               info.value = [];
               for (let i = 0; i < count; i++) {
                 info.value[i] = {
-                  value: Buffer.from(data.slice((i * 7) + 2, (i * 7) + 6)).readInt32LE(),
-                  country_code: Buffer.from(data.slice((i * 7) + 6, (i * 7) + 9)).toString()
+                  value: Buffer.from(chunk.slice((i * 7) + 2, (i * 7) + 6)).readInt32LE(),
+                  country_code: Buffer.from(chunk.slice((i * 7) + 6, (i * 7) + 9)).toString()
                 };
               }
               if (info.name === 'ERROR_DURING_PAYOUT') {
-                info.errorCode = data[(count * 7) + 1] === 0 ? 'wrong_recognition' : 'jammed';
+                info.errorCode = chunk[(count * 7) + 1] === 0 ? 'wrong_recognition' : 'jammed';
               }
+              k += 1 + count * 7;
             } else {
-              info.value = Buffer.from(data.slice(0, 4)).readInt32LE();
+              info.value = Buffer.from(chunk.slice(0, 4)).readInt32LE();
+              k += 5;
             }
+          } else if (info.name === 'NOTE_HELD_IN_BEZEL') {
+            info.value = {
+              value: Buffer.from(chunk.slice(1, 5)).readInt32LE(),
+              country_code: Buffer.from(chunk.slice(5, 8)).toString()
+            };
+            k += 8;
           } else if (info.name === 'INCOMPLETE_PAYOUT') {
-            if (data.length === 9) {
-              info.dispensed = Buffer.from(data.slice(1, 5)).readInt32LE();
-              info.requested = Buffer.from(data.slice(5, 9)).readInt32LE();
+            if (protocolVersion < 6) {
+              info.dispensed = Buffer.from(chunk.slice(1, 5)).readInt32LE();
+              info.requested = Buffer.from(chunk.slice(5, 9)).readInt32LE();
+              k += 9;
             } else {
-              let count = Math.floor(data.length / 11);
+              let count = chunk[1];
               info.value = [];
               for (let i = 0; i < count; i++) {
                 info.value[i] = {
-                  dispensed: Buffer.from(data.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
-                  requested: Buffer.from(data.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
-                  country_code: Buffer.from(data.slice((i * 11) + 9, (i * 11) + 12)).toString()
+                  dispensed: Buffer.from(chunk.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
+                  requested: Buffer.from(chunk.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
+                  country_code: Buffer.from(chunk.slice((i * 11) + 9, (i * 11) + 12)).toString()
                 };
               }
+
+              k += 1 + count * 11;
             }
           } else if (info.name === 'INCOMPLETE_FLOAT') {
-            if (data.length === 9) {
-              info.dispensed = Buffer.from(data.slice(1, 5)).readInt32LE();
-              info.floated = Buffer.from(data.slice(5, 9)).readInt32LE();
+            if (protocolVersion < 6) {
+              info.dispensed = Buffer.from(chunk.slice(1, 5)).readInt32LE();
+              info.floated = Buffer.from(chunk.slice(5, 9)).readInt32LE();
+              k += 9;
             } else {
-              let count = Math.floor(data.length / 11);
+              let count = chunk[1];
               info.value = [];
               for (let i = 0; i < count; i++) {
                 info.value[i] = {
-                  floated: Buffer.from(data.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
-                  requested: Buffer.from(data.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
-                  country_code: Buffer.from(data.slice((i * 11) + 9, (i * 11) + 12)).toString()
+                  floated: Buffer.from(chunk.slice((i * 11) + 1, (i * 11) + 5)).readInt32LE(),
+                  requested: Buffer.from(chunk.slice((i * 11) + 5, (i * 11) + 9)).readInt32LE(),
+                  country_code: Buffer.from(chunk.slice((i * 11) + 9, (i * 11) + 12)).toString()
                 };
               }
+
+              k += 1 + count * 11;
             }
+          } else {
+            k += 1;
           }
 
           result.info.push(info);
-        });
+        }
       } else if (currentCommand === 'CASHBOX_PAYOUT_OPERATION_DATA') {
         result.info = { res: {} };
         console.log(data);

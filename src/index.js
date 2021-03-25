@@ -37,6 +37,7 @@ module.exports = class SSP extends EventEmitter {
     this.aesEncryption = null;
     this.enabled = false;
     this.polling = false;
+    this.unit_type = null;
   }
 
   open(port, param = {}) {
@@ -247,7 +248,7 @@ module.exports = class SSP extends EventEmitter {
         this.count = eCOUNT;
       }
 
-      let parsedData = parseData(DATA, this.currentCommand, this.protocol_version);
+      let parsedData = parseData(DATA, this.currentCommand, this.protocol_version, this.unit_type);
 
       if (this.debug) {
         console.log(parsedData);
@@ -257,6 +258,9 @@ module.exports = class SSP extends EventEmitter {
         this.createHostEncryptionKeys(parsedData.info.key);
       } else if (this.currentCommand === 'SETUP_REQUEST') {
         this.protocol_version = parsedData.info.protocol_version;
+        this.unit_type = parsedData.info.unit_type;
+      } else if (this.currentCommand === 'UNIT_DATA') {
+        this.unit_type = parsedData.info.unit_type;
       }
 
       return parsedData;
