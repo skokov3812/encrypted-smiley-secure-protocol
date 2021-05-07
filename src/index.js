@@ -7,6 +7,7 @@ const commandList = require('./command');
 const chalk = require('chalk');
 const semver = require('semver');
 const pkg = require('../package.json');
+const ESSPProtocolParser = require('./parser');
 
 module.exports = class SSP extends EventEmitter {
   constructor(param) {
@@ -47,8 +48,14 @@ module.exports = class SSP extends EventEmitter {
         databits: param.databits || 8,
         stopbits: param.stopbits || 2,
         parity: param.parity || 'none',
-        parser: SerialPort.parsers.raw,
+        highWaterMark: param.highWaterMark || 64 * 1024,
         autoOpen: true
+      });
+
+      const parser = this.port.pipe(new ESSPProtocolParser({ id: this.id }));
+      parser.on('data', buffer => {
+        if (this.debug) { console.log('COM ->', chalk.yellow(buffer.toString('hex')), chalk.green(this.currentCommand)); }
+        this.eventEmitter.emit(this.currentCommand, buffer);
       });
 
       this.port.on('error', (error) => {
@@ -64,48 +71,6 @@ module.exports = class SSP extends EventEmitter {
       this.port.on('open', () => {
         resolve();
         this.emit('OPEN');
-
-        let tmpBuffer = [];
-        this.port.on('data', buffer => {
-          let tmpArray = [...buffer];
-
-          if (this.debug) { console.log('COM ->', chalk.gray(buffer.toString('hex')), '| RAW'); }
-
-          if (tmpBuffer.length === 1) {
-            if ((tmpArray[0] === this.id | 0x80) || (tmpArray[0] === this.id | 0x00)) {
-              tmpBuffer = [0x7f].concat(tmpArray);
-            } else {
-              tmpBuffer = [];
-            }
-          } else {
-            if (tmpBuffer.length === 0) {
-              let startByte = -1;
-
-              for (let i = 0; i < tmpArray.length; i++) {
-                if (tmpArray[i] === 0x7f && startByte === -1 && ((tmpArray[i + 1] === this.id | 0x80) || (tmpArray[i + 1] === this.id | 0x00))) {
-                  startByte = i;
-                }
-              }
-
-              if (startByte !== -1) {
-                tmpBuffer = tmpArray.slice(startByte, tmpArray.length);
-              } else if (tmpArray[tmpArray.length - 1] === 0x7f) {
-                tmpBuffer = [0x7f];
-              }
-            } else {
-              tmpBuffer = tmpBuffer.concat(tmpArray);
-            }
-          }
-
-          let double7F = (tmpBuffer.join(',').match(/,127,127/g) || []).length;
-
-          if (tmpBuffer.length >= tmpBuffer[2] + 5 + double7F) {
-            if (this.debug) { console.log('COM ->', chalk.yellow(Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F)).toString('hex')), chalk.green(this.currentCommand)); }
-
-            this.eventEmitter.emit(this.currentCommand, Buffer.from(tmpBuffer.slice(0, tmpBuffer[2] + 5 + double7F).join(',').replace(/,127,127/g, ',127').split(','), tmpBuffer[2]));
-            tmpBuffer = tmpBuffer.slice(tmpBuffer[2] + 5 + double7F);
-          }
-        });
       });
     });
   }
@@ -267,6 +232,7 @@ module.exports = class SSP extends EventEmitter {
     }
     return { success: false, error: 'Unknown response' };
   }
+
   createHostEncryptionKeys(data) {
     if (this.keys.key === null) {
       this.keys.slaveIntKey = Buffer.from(data).readBigInt64LE();
