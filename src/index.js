@@ -141,24 +141,26 @@ module.exports = class SSP extends EventEmitter {
     return comandLine;
   }
 
+  getPromise(command, buffer) {
+    this.currentCommand = command;
+
+    return new Promise((resolve) => {
+      this.port.write(buffer);
+      this.port.drain(() => {
+        if (command === 'SYNC') { this.sequence = 0x80; }
+        return resolve(this.newEvent(command));
+      });
+    })
+      .then(res => {
+        return res.status === 'TIMEOUT' ? this.getPromise(command, buffer) : res;
+      });
+  }
+
   exec(command, args = []) {
     command = command.toUpperCase();
     if (commandList[command] === undefined) { throw new Error('command not found'); }
-
-    this.currentCommand = command;
     let buffer = Buffer.from(this.getPacket(command, args));
-
-    return new Promise((resolve) => {
-      this.port.write(buffer, () => {
-        this.port.drain();
-
-        if (command === 'SYNC') { this.sequence = 0x80; }
-      });
-      resolve(this.newEvent(command));
-    })
-      .then(res => {
-        return res.status === 'TIMEOUT' ? this.exec(command, args) : res;
-      });
+    return this.getPromise(command, buffer);
   }
 
   newEvent(command) {
