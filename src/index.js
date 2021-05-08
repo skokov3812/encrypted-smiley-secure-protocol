@@ -1,7 +1,7 @@
 const SerialPort = require('serialport');
 const aesjs = require('aes-js');
 const EventEmitter = require('events');
-const bigintCryptoUtils = require('bigint-crypto-utils');
+const crypto = require('crypto');
 const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils');
 const commandList = require('./command');
 const chalk = require('chalk');
@@ -88,9 +88,9 @@ module.exports = class SSP extends EventEmitter {
 
   initEncryption() {
     return Promise.all([
-      bigintCryptoUtils.prime(16),
-      bigintCryptoUtils.prime(16),
-      bigintCryptoUtils.randBetween(BigInt(2) ** BigInt(16))
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16LE()),
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16LE()),
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16LE())
     ])
       .then(res => {
         this.keys.generatorKey = res[0];
