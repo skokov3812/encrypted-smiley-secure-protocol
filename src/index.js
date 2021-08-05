@@ -88,9 +88,9 @@ module.exports = class SSP extends EventEmitter {
 
   initEncryption() {
     return Promise.all([
-      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16LE()),
-      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16LE()),
-      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16LE())
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE())
     ])
       .then(res => {
         this.keys.generatorKey = res[0];
