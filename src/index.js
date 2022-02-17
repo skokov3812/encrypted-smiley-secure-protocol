@@ -272,9 +272,6 @@ module.exports = class SSP extends EventEmitter {
         if (res.status === 'OK') {
           this.enabled = false;
           this.poll(false)
-            .then(() => {
-              this.emit('DISABLED');
-            });
         }
         return res;
       });
@@ -307,11 +304,6 @@ module.exports = class SSP extends EventEmitter {
 
             res.forEach((info) => {
               this.emit(info.name, info);
-              // Device reports disabled event on each poll during smart epmy or dispensing, so need to encounter that
-              // Maybe there is better solution, but found no clue in docs
-              if (res.length === 1 && info.name === 'DISABLED') {
-                this.poll(false);
-              }
             });
           }
 
