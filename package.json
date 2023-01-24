@@ -30,7 +30,6 @@
   },
   "homepage": "https://github.com/skokov3812/encrypted-smiley-secure-protocol#readme",
   "dependencies": {
-    "aes-js": "^3.1.2",
     "chalk": "^2.4.2",
     "debug": "^4.3.1",
     "semver": "^7.3.5",

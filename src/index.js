@@ -1,5 +1,4 @@
 const SerialPort = require('serialport');
-const aesjs = require('aes-js');
 const EventEmitter = require('events');
 const crypto = require('crypto');
 const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils');
@@ -8,6 +7,25 @@ const chalk = require('chalk');
 const semver = require('semver');
 const pkg = require('../package.json');
 const ESSPProtocolParser = require('./parser');
+
+
+// Encrypt
+const encrypt = (key, message) => {
+  const cipher = crypto.createCipheriv('aes-128-ecb', key, null);
+  cipher.setAutoPadding(false);
+  const encryptedData = Buffer.concat([cipher.update(message), cipher.final()]);
+
+  return encryptedData;
+};
+
+// Decrypt
+const decrypt = (key, data) => {
+  const decipher = crypto.createDecipheriv('aes-128-ecb', key, null);
+  decipher.setAutoPadding(false);
+  const decryptedData = Buffer.concat([decipher.update(data), decipher.final()]);
+
+  return decryptedData;
+};
 
 module.exports = class SSP extends EventEmitter {
   constructor(param) {
@@ -23,6 +41,7 @@ module.exports = class SSP extends EventEmitter {
     this.id = param.id || 0;
     this.timeout = param.timeout || 3000;
     this.encryptAllCommand = param.encryptAllCommand || true;
+    this.encryptKey = null;
     this.keys = {
       fixedKey: param.fixedKey || '0123456701234567',
       generatorKey: null,
@@ -35,7 +54,6 @@ module.exports = class SSP extends EventEmitter {
     this.sequence = 0x80;
     this.count = 0;
     this.currentCommand = null;
-    this.aesEncryption = null;
     this.enabled = false;
     this.polling = false;
     this.unit_type = null;
@@ -119,7 +137,7 @@ module.exports = class SSP extends EventEmitter {
     let DATA = [commandList[command].code].concat(...args);
 
     // Encrypted packet
-    if (this.aesEncryption !== null && (commandList[command].encrypted || this.encryptAllCommand)) {
+    if (this.encryptKey !== null && (commandList[command].encrypted || this.encryptAllCommand)) {
       let eCOUNT = Buffer.alloc(4);
       eCOUNT.writeUInt32LE(this.count, 0);
       let eCommandLine = [DATA.length].concat([...eCOUNT], DATA);
@@ -127,7 +145,7 @@ module.exports = class SSP extends EventEmitter {
       eCommandLine = eCommandLine.concat(ePACKING);
       eCommandLine = eCommandLine.concat(CRC16(eCommandLine));
 
-      let eDATA = [...this.aesEncryption.encrypt(eCommandLine)];
+      let eDATA = [...encrypt(this.encryptKey, Buffer.from(eCommandLine))];
 
       DATA = [STEX].concat(eDATA);
       LENGTH = DATA.length;
@@ -142,8 +160,6 @@ module.exports = class SSP extends EventEmitter {
   }
 
   getPromise(command, buffer) {
-    this.currentCommand = command;
-
     return new Promise((resolve) => {
       this.port.write(buffer);
       this.port.drain(() => {
@@ -159,6 +175,7 @@ module.exports = class SSP extends EventEmitter {
   exec(command, args = []) {
     command = command.toUpperCase();
     if (commandList[command] === undefined) { throw new Error('command not found'); }
+    this.currentCommand = command;
     let buffer = Buffer.from(this.getPacket(command, args));
     return this.getPromise(command, buffer);
   }
@@ -207,7 +224,7 @@ module.exports = class SSP extends EventEmitter {
         return { success: false, error: 'Wrong CRC16' };
       }
       if (this.keys.key !== null && DATA[0] === 0x7E) {
-        DATA = this.aesEncryption.decrypt(Buffer.from(DATA.slice(1)));
+        DATA = decrypt(this.encryptKey, Buffer.from(DATA.slice(1)));
         if (this.debug) { console.log('Decrypted:', chalk.red(Buffer.from(DATA).toString('hex'))); }
         let eLENGTH = DATA[0];
         let eCOUNT = Buffer.from(DATA.slice(1, 5)).readInt32LE();
@@ -244,7 +261,6 @@ module.exports = class SSP extends EventEmitter {
         int64LE(this.keys.key)
       ]);
 
-      this.aesEncryption = new aesjs.ModeOfOperation.ecb(this.encryptKey, null, 0);
       this.count = 0;
       if (this.debug) {
         console.log('AES encrypt key:', chalk.red('0x' + Buffer.from(this.encryptKey).toString('hex')));
@@ -271,7 +287,7 @@ module.exports = class SSP extends EventEmitter {
       .then(res => {
         if (res.status === 'OK') {
           this.enabled = false;
-          this.poll(false)
+          this.poll(false);
         }
         return res;
       });
