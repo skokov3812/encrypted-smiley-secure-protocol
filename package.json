@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint ./src ./example.js"
+    "lint": "eslint src && npx prettier --check ."
   },
   "engines": {
     "node": ">=10.4.0"
@@ -37,6 +37,8 @@
   },
   "devDependencies": {
     "eslint": "^7.25.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-mocha": "^10.1.0",
     "eslint-plugin-node": "^11.1.0"
   }
 }
