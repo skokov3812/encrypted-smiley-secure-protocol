@@ -1,47 +1,46 @@
-const SerialPort = require('serialport');
-const EventEmitter = require('events');
-const crypto = require('crypto');
-const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils');
-const commandList = require('./command');
-const chalk = require('chalk');
-const semver = require('semver');
-const pkg = require('../package.json');
-const ESSPProtocolParser = require('./parser');
-
+const { SerialPort } = require('serialport')
+const EventEmitter = require('events')
+const crypto = require('crypto')
+const { parseData, CRC16, randHexArray, argsToByte, int64LE } = require('./utils')
+const commandList = require('./command')
+const chalk = require('chalk')
+const semver = require('semver')
+const pkg = require('../package.json')
+const ESSPProtocolParser = require('./parser')
 
 // Encrypt
 const encrypt = (key, message) => {
-  const cipher = crypto.createCipheriv('aes-128-ecb', key, null);
-  cipher.setAutoPadding(false);
-  const encryptedData = Buffer.concat([cipher.update(message), cipher.final()]);
+  const cipher = crypto.createCipheriv('aes-128-ecb', key, null)
+  cipher.setAutoPadding(false)
+  const encryptedData = Buffer.concat([cipher.update(message), cipher.final()])
 
-  return encryptedData;
-};
+  return encryptedData
+}
 
 // Decrypt
 const decrypt = (key, data) => {
-  const decipher = crypto.createDecipheriv('aes-128-ecb', key, null);
-  decipher.setAutoPadding(false);
-  const decryptedData = Buffer.concat([decipher.update(data), decipher.final()]);
+  const decipher = crypto.createDecipheriv('aes-128-ecb', key, null)
+  decipher.setAutoPadding(false)
+  const decryptedData = Buffer.concat([decipher.update(data), decipher.final()])
 
-  return decryptedData;
-};
+  return decryptedData
+}
 
 module.exports = class SSP extends EventEmitter {
   constructor(param) {
-    super();
+    super()
 
     if (!semver.satisfies(process.version, pkg.engines.node)) {
-      throw new Error(`Version Node.js must be ${pkg.engines.node}`);
+      throw new Error(`Version Node.js must be ${pkg.engines.node}`)
     }
 
-    this.eventEmitter = new EventEmitter();
+    this.eventEmitter = new EventEmitter()
 
-    this.debug = param.debug || false;
-    this.id = param.id || 0;
-    this.timeout = param.timeout || 3000;
-    this.encryptAllCommand = param.encryptAllCommand || true;
-    this.encryptKey = null;
+    this.debug = param.debug || false
+    this.id = param.id || 0
+    this.timeout = param.timeout || 3000
+    this.encryptAllCommand = param.encryptAllCommand || true
+    this.encryptKey = null
     this.keys = {
       fixedKey: param.fixedKey || '0123456701234567',
       generatorKey: null,
@@ -49,296 +48,313 @@ module.exports = class SSP extends EventEmitter {
       hostRandom: null,
       hostIntKey: null,
       slaveIntKey: null,
-      key: null
-    };
-    this.sequence = 0x80;
-    this.count = 0;
-    this.currentCommand = null;
-    this.enabled = false;
-    this.polling = false;
-    this.unit_type = null;
+      key: null,
+    }
+    this.sequence = 0x80
+    this.count = 0
+    this.currentCommand = null
+    this.enabled = false
+    this.polling = false
+    this.unit_type = null
+
+    this.commandTimeout = null
   }
 
   open(port, param = {}) {
     return new Promise((resolve, reject) => {
-      this.port = new SerialPort(port, {
+      this.port = new SerialPort({
+        path: port,
         baudRate: param.baudRate || 9600,
-        databits: param.databits || 8,
-        stopbits: param.stopbits || 2,
+        dataBits: param.dataBits || 8,
+        stopBits: param.stopBits || 2,
         parity: param.parity || 'none',
         highWaterMark: param.highWaterMark || 64 * 1024,
-        autoOpen: true
-      });
+        autoOpen: true,
+      })
 
-      const parser = this.port.pipe(new ESSPProtocolParser({ id: this.id }));
+      const parser = this.port.pipe(new ESSPProtocolParser({ id: this.id }))
       parser.on('data', buffer => {
-        if (this.debug) { console.log('COM ->', chalk.yellow(buffer.toString('hex')), chalk.green(this.currentCommand)); }
-        this.eventEmitter.emit(this.currentCommand, buffer);
-      });
+        if (this.debug) {
+          console.log('COM ->', chalk.yellow(buffer.toString('hex')), chalk.green(this.currentCommand))
+        }
+        this.eventEmitter.emit(this.currentCommand, buffer)
+      })
 
-      this.port.on('error', (error) => {
-        reject(error);
-        this.emit('CLOSE');
-      });
+      this.port.on('error', error => {
+        reject(error)
+        this.emit('CLOSE')
+      })
 
-      this.port.on('close', (error) => {
-        reject(error);
-        this.emit('CLOSE');
-      });
+      this.port.on('close', error => {
+        reject(error)
+        this.emit('CLOSE')
+      })
 
       this.port.on('open', () => {
-        resolve();
-        this.emit('OPEN');
-      });
-    });
+        resolve()
+        this.emit('OPEN')
+      })
+    })
   }
 
   close() {
     if (this.port !== undefined) {
-      this.port.close();
+      this.port.close()
     }
   }
 
   getSequence() {
-    this.sequence = this.sequence === 0x00 ? 0x80 : 0x00;
-    return this.id | this.sequence;
+    this.sequence = this.sequence === 0x00 ? 0x80 : 0x00
+    return this.id | this.sequence
   }
 
   initEncryption() {
     return Promise.all([
       BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
       BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
-      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE())
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
     ])
       .then(res => {
-        this.keys.generatorKey = res[0];
-        this.keys.modulusKey = res[1];
-        this.keys.hostRandom = res[2];
-        this.keys.hostIntKey = this.keys.generatorKey ** this.keys.hostRandom % this.keys.modulusKey;
-        return;
+        this.keys.generatorKey = res[0]
+        this.keys.modulusKey = res[1]
+        this.keys.hostRandom = res[2]
+        this.keys.hostIntKey = this.keys.generatorKey ** this.keys.hostRandom % this.keys.modulusKey
+        return
       })
       .then(() => this.exec('SET_GENERATOR', int64LE(this.keys.generatorKey)))
       .then(() => this.exec('SET_MODULUS', int64LE(this.keys.modulusKey)))
       .then(() => this.exec('REQUEST_KEY_EXCHANGE', int64LE(this.keys.hostIntKey)))
       .then(() => {
-        this.count = 0;
-        return;
-      });
+        this.count = 0
+        return
+      })
   }
 
   getPacket(command, args) {
-    let STX = 0x7F;
-    let STEX = 0x7E;
+    const STX = 0x7f
+    const STEX = 0x7e
 
-    if (commandList[command].args && args.length === 0) { throw new Error('args missings'); }
+    if (commandList[command].args && args.length === 0) {
+      throw new Error('args missings')
+    }
 
-    let LENGTH = args.length + 1;
-    let SEQ_SLAVE_ID = this.getSequence();
-    let DATA = [commandList[command].code].concat(...args);
+    let LENGTH = args.length + 1
+    const SEQ_SLAVE_ID = this.getSequence()
+    let DATA = [commandList[command].code].concat(...args)
 
     // Encrypted packet
     if (this.encryptKey !== null && (commandList[command].encrypted || this.encryptAllCommand)) {
-      let eCOUNT = Buffer.alloc(4);
-      eCOUNT.writeUInt32LE(this.count, 0);
-      let eCommandLine = [DATA.length].concat([...eCOUNT], DATA);
-      let ePACKING = randHexArray(Math.ceil((eCommandLine.length + 2) / 16) * 16 - (eCommandLine.length + 2));
-      eCommandLine = eCommandLine.concat(ePACKING);
-      eCommandLine = eCommandLine.concat(CRC16(eCommandLine));
+      const eCOUNT = Buffer.alloc(4)
+      eCOUNT.writeUInt32LE(this.count, 0)
+      let eCommandLine = [DATA.length].concat([...eCOUNT], DATA)
+      const ePACKING = randHexArray(Math.ceil((eCommandLine.length + 2) / 16) * 16 - (eCommandLine.length + 2))
+      eCommandLine = eCommandLine.concat(ePACKING)
+      eCommandLine = eCommandLine.concat(CRC16(eCommandLine))
 
-      let eDATA = [...encrypt(this.encryptKey, Buffer.from(eCommandLine))];
+      const eDATA = [...encrypt(this.encryptKey, Buffer.from(eCommandLine))]
 
-      DATA = [STEX].concat(eDATA);
-      LENGTH = DATA.length;
+      DATA = [STEX].concat(eDATA)
+      LENGTH = DATA.length
     }
 
-    let tmp = [SEQ_SLAVE_ID].concat(LENGTH, DATA);
-    let comandLine = Buffer.from([STX].concat(tmp, CRC16(tmp)).join(',').replace(/,127/g, ',127,127').split(','));
+    const tmp = [SEQ_SLAVE_ID].concat(LENGTH, DATA)
+    const comandLine = Buffer.from([STX].concat(tmp, CRC16(tmp)).join(',').replace(/,127/g, ',127,127').split(','))
 
-    if (this.debug) { console.log('COM <-', chalk.cyan(comandLine.toString('hex')), chalk.green(this.currentCommand), this.count); }
+    if (this.debug) {
+      console.log('COM <-', chalk.cyan(comandLine.toString('hex')), chalk.green(this.currentCommand), this.count)
+    }
 
-    return comandLine;
+    return comandLine
   }
 
-  getPromise(command, buffer) {
-    return new Promise((resolve) => {
-      this.port.write(buffer);
-      this.port.drain(() => {
-        if (command === 'SYNC') { this.sequence = 0x80; }
-        return resolve(this.newEvent(command));
-      });
+  getPromise(buffer, command) {
+    this.currentCommand = command
+    return new Promise(resolve => {
+      this.port.write(buffer)
+      this.port.drain()
+      if (command === 'SYNC') {
+        this.sequence = 0x80
+      }
+      return resolve(this.newEvent(command))
+    }).then(res => {
+      return res.status === 'TIMEOUT' ? this.getPromise(buffer, command) : res
     })
-      .then(res => {
-        return res.status === 'TIMEOUT' ? this.getPromise(command, buffer) : res;
-      });
   }
 
   exec(command, args = []) {
-    command = command.toUpperCase();
-    if (commandList[command] === undefined) { throw new Error('command not found'); }
-    this.currentCommand = command;
-    let buffer = Buffer.from(this.getPacket(command, args));
-    return this.getPromise(command, buffer);
+    command = command.toUpperCase()
+    if (commandList[command] === undefined) {
+      throw new Error('command not found')
+    }
+    const buffer = Buffer.from(this.getPacket(command, args))
+    return this.getPromise(buffer, command)
   }
 
   newEvent(command) {
-    return new Promise((resolve) => {
-      let timeout = true;
+    return new Promise(resolve => {
       this.eventEmitter.once(command, buffer => {
-        timeout = false;
+        clearTimeout(this.commandTimeout)
+
         if (Buffer.isBuffer(buffer)) {
-          resolve(this.parsePacket(buffer));
+          resolve(this.parsePacket(buffer))
         } else if (buffer === 'TIMEOUT') {
-          if (this.debug) { console.log(chalk.red('TIMEOUT ' + command)); }
+          if (this.debug) {
+            console.log(chalk.red(`TIMEOUT ${command}`))
+          }
 
           resolve({
             success: false,
             status: 'TIMEOUT',
-            command: this.currentCommand,
-            info: {}
-          });
+            command,
+            info: {},
+          })
         }
-      });
+      })
 
-      setTimeout(() => {
-        if (timeout) {
-          this.eventEmitter.emit(this.currentCommand, 'TIMEOUT');
-          this.currentCommand = null;
-        }
-      }, parseInt(this.timeout));
-    })
-      .then(res => new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(res);
-        }, 100);
-      }));
+      this.commandTimeout = setTimeout(() => {
+        this.eventEmitter.emit(command, 'TIMEOUT')
+        this.currentCommand = null
+      }, parseInt(this.timeout))
+    }).then(
+      res =>
+        new Promise(resolve => {
+          setTimeout(() => {
+            resolve(res)
+          }, 100)
+        })
+    )
   }
 
   parsePacket(buffer) {
-    buffer = [...buffer];
-    if (buffer[0] === 0x7F) {
-      buffer = buffer.slice(1);
-      let DATA = buffer.slice(2, buffer[1] + 2);
-      let CRC = CRC16(buffer.slice(0, buffer[1] + 2));
+    buffer = [...buffer]
+    if (buffer[0] === 0x7f) {
+      buffer = buffer.slice(1)
+      let DATA = buffer.slice(2, buffer[1] + 2)
+      const CRC = CRC16(buffer.slice(0, buffer[1] + 2))
 
       if (CRC[0] !== buffer[buffer.length - 2] || CRC[1] !== buffer[buffer.length - 1]) {
-        return { success: false, error: 'Wrong CRC16' };
+        return { success: false, error: 'Wrong CRC16' }
       }
-      if (this.keys.key !== null && DATA[0] === 0x7E) {
-        DATA = decrypt(this.encryptKey, Buffer.from(DATA.slice(1)));
-        if (this.debug) { console.log('Decrypted:', chalk.red(Buffer.from(DATA).toString('hex'))); }
-        let eLENGTH = DATA[0];
-        let eCOUNT = Buffer.from(DATA.slice(1, 5)).readInt32LE();
-        DATA = DATA.slice(5, eLENGTH + 5);
-        this.count = eCOUNT;
+      if (this.keys.key !== null && DATA[0] === 0x7e) {
+        DATA = decrypt(this.encryptKey, Buffer.from(DATA.slice(1)))
+        if (this.debug) {
+          console.log('Decrypted:', chalk.red(Buffer.from(DATA).toString('hex')))
+        }
+        const eLENGTH = DATA[0]
+        const eCOUNT = Buffer.from(DATA.slice(1, 5)).readInt32LE()
+        DATA = DATA.slice(5, eLENGTH + 5)
+        this.count = eCOUNT
       }
 
-      let parsedData = parseData(DATA, this.currentCommand, this.protocol_version, this.unit_type);
+      const parsedData = parseData(DATA, this.currentCommand, this.protocol_version, this.unit_type)
 
       if (this.debug) {
-        console.log(parsedData);
+        console.log(parsedData)
       }
 
-      if (this.currentCommand === 'REQUEST_KEY_EXCHANGE') {
-        this.createHostEncryptionKeys(parsedData.info.key);
-      } else if (this.currentCommand === 'SETUP_REQUEST') {
-        this.protocol_version = parsedData.info.protocol_version;
-        this.unit_type = parsedData.info.unit_type;
-      } else if (this.currentCommand === 'UNIT_DATA') {
-        this.unit_type = parsedData.info.unit_type;
+      if (parsedData.success) {
+        if (this.currentCommand === 'REQUEST_KEY_EXCHANGE') {
+          try {
+            this.createHostEncryptionKeys(parsedData.info.key)
+          } catch (error) {
+            return { success: false, error: 'Key exchange error', buffer }
+          }
+        } else if (this.currentCommand === 'SETUP_REQUEST') {
+          this.protocol_version = parsedData.info.protocol_version
+          this.unit_type = parsedData.info.unit_type
+        } else if (this.currentCommand === 'UNIT_DATA') {
+          this.unit_type = parsedData.info.unit_type
+        }
       }
 
-      return parsedData;
+      return parsedData
     }
-    return { success: false, error: 'Unknown response' };
+    return { success: false, error: 'Unknown response' }
   }
 
   createHostEncryptionKeys(data) {
     if (this.keys.key === null) {
-      this.keys.slaveIntKey = Buffer.from(data).readBigInt64LE();
-      this.keys.key = this.keys.slaveIntKey ** this.keys.hostRandom % this.keys.modulusKey;
-      this.encryptKey = Buffer.concat([
-        int64LE(Buffer.from(this.keys.fixedKey, 'hex').readBigInt64BE()),
-        int64LE(this.keys.key)
-      ]);
+      this.keys.slaveIntKey = Buffer.from(data).readBigInt64LE()
+      this.keys.key = this.keys.slaveIntKey ** this.keys.hostRandom % this.keys.modulusKey
+      this.encryptKey = Buffer.concat([int64LE(Buffer.from(this.keys.fixedKey, 'hex').readBigInt64BE()), int64LE(this.keys.key)])
 
-      this.count = 0;
+      this.count = 0
       if (this.debug) {
-        console.log('AES encrypt key:', chalk.red('0x' + Buffer.from(this.encryptKey).toString('hex')));
-        console.log('');
-        console.log(this.keys);
-        console.log('');
+        console.log('AES encrypt key:', chalk.red(`0x${Buffer.from(this.encryptKey).toString('hex')}`))
+        console.log('')
+        console.log(this.keys)
+        console.log('')
       }
     }
   }
 
   enable() {
-    return this.command('ENABLE')
-      .then(res => {
-        if (res.status === 'OK') {
-          this.enabled = true;
-          if (!this.polling) this.poll(true);
-        }
-        return res;
-      });
+    return this.command('ENABLE').then(res => {
+      if (res.status === 'OK') {
+        this.enabled = true
+        if (!this.polling) this.poll(true)
+      }
+      return res
+    })
   }
 
   disable() {
-    return this.command('DISABLE')
-      .then(res => {
-        if (res.status === 'OK') {
-          this.enabled = false;
-          this.poll(false);
-        }
-        return res;
-      });
+    return this.command('DISABLE').then(res => {
+      if (res.status === 'OK') {
+        this.enabled = false
+        this.poll(false)
+      }
+      return res
+    })
   }
 
   command(command, args) {
     if (this.enabled) {
-      let result = null;
+      let result = null
 
       return this.poll(false)
         .then(() => this.exec(command, argsToByte(command, args, this.protocol_version)))
         .then(res => {
-          result = res;
-          if (!this.polling) return this.poll(true);
-          return () => { };
+          result = res
+          if (!this.polling) return this.poll(true)
+          return () => {}
         })
-        .then(() => result);
+        .then(() => result)
     }
-    return this.exec(command, argsToByte(command, args, this.protocol_version));
+    return this.exec(command, argsToByte(command, args, this.protocol_version))
   }
 
   poll(status = true) {
     if (status) {
-      this.polling = true;
-      return this.exec('POLL')
-        .then(result => {
-          if (result.info) {
-            let res = result.info;
-            if (!Array.isArray(result.info)) res = [result.info];
+      this.polling = true
+      return this.exec('POLL').then(result => {
+        if (result.info) {
+          let res = result.info
+          if (!Array.isArray(result.info)) res = [result.info]
 
-            res.forEach((info) => {
-              this.emit(info.name, info);
-            });
-          }
+          res.forEach(info => {
+            this.emit(info.name, info)
+          })
+        }
 
-          if (this.polling) {
-            this.poll();
-          } else {
-            this.eventEmitter.emit('POLL_STOP');
-          }
-          return;
-        });
+        if (this.polling) {
+          this.poll()
+        } else {
+          this.eventEmitter.emit('POLL_STOP')
+        }
+        return
+      })
     }
     if (this.polling !== false) {
-      this.polling = false;
-      return new Promise((resolve) => {
+      this.polling = false
+      return new Promise(resolve => {
         this.eventEmitter.once('POLL_STOP', () => {
-          resolve();
-        });
-      });
+          resolve()
+        })
+      })
     }
-    return new Promise((resolve) => { resolve(); });
+    return new Promise(resolve => {
+      resolve()
+    })
   }
-};
+}

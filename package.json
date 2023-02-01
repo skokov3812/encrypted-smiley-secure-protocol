@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint ./src ./example.js"
+    "lint": "eslint src && npx prettier --check ."
   },
   "engines": {
     "node": ">=10.4.0"
@@ -33,10 +33,12 @@
     "chalk": "^2.4.2",
     "debug": "^4.3.1",
     "semver": "^7.3.5",
-    "serialport": "^9.0.7"
+    "serialport": "^10.5.0"
   },
   "devDependencies": {
     "eslint": "^7.25.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-mocha": "^10.1.0",
     "eslint-plugin-node": "^11.1.0"
   }
 }
