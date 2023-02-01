@@ -40,7 +40,7 @@ module.exports = class SSP extends EventEmitter {
     this.id = param.id || 0
     this.timeout = param.timeout || 3000
     this.encryptAllCommand = param.encryptAllCommand || true
-    this.encryptionKey = null
+    this.encryptKey = null
     this.keys = {
       fixedKey: param.fixedKey || '0123456701234567',
       generatorKey: null,
@@ -56,6 +56,8 @@ module.exports = class SSP extends EventEmitter {
     this.enabled = false
     this.polling = false
     this.unit_type = null
+
+    this.commandTimeout = null
   }
 
   open(port, param = {}) {
@@ -63,8 +65,8 @@ module.exports = class SSP extends EventEmitter {
       this.port = new SerialPort({
         path: port,
         baudRate: param.baudRate || 9600,
-        dataBits: param.databits || 8,
-        stopBits: param.stopbits || 2,
+        dataBits: param.dataBits || 8,
+        stopBits: param.stopBits || 2,
         parity: param.parity || 'none',
         highWaterMark: param.highWaterMark || 64 * 1024,
         autoOpen: true,
@@ -88,10 +90,7 @@ module.exports = class SSP extends EventEmitter {
         this.emit('CLOSE')
       })
 
-      this.port.on('open', error => {
-        if (error) {
-          return reject(error)
-        }
+      this.port.on('open', () => {
         resolve()
         this.emit('OPEN')
       })
@@ -109,21 +108,26 @@ module.exports = class SSP extends EventEmitter {
     return this.id | this.sequence
   }
 
-  async initEncryption() {
-    this.keys.generatorKey = BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE())
-    this.keys.modulusKey = BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE())
-    this.keys.hostRandom = BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE())
-    this.keys.hostIntKey = this.keys.generatorKey ** this.keys.hostRandom % this.keys.modulusKey
-
-    let result = await this.exec('SET_GENERATOR', int64LE(this.keys.generatorKey))
-    if (!result.success) throw result
-    result = await this.exec('SET_MODULUS', int64LE(this.keys.modulusKey))
-    if (!result.success) throw result
-    result = await this.exec('REQUEST_KEY_EXCHANGE', int64LE(this.keys.hostIntKey))
-    if (!result.success) throw result
-    this.count = 0
-
-    return
+  initEncryption() {
+    return Promise.all([
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
+      BigInt(crypto.createDiffieHellman(16).getPrime().readUInt16BE()),
+    ])
+      .then(res => {
+        this.keys.generatorKey = res[0]
+        this.keys.modulusKey = res[1]
+        this.keys.hostRandom = res[2]
+        this.keys.hostIntKey = this.keys.generatorKey ** this.keys.hostRandom % this.keys.modulusKey
+        return
+      })
+      .then(() => this.exec('SET_GENERATOR', int64LE(this.keys.generatorKey)))
+      .then(() => this.exec('SET_MODULUS', int64LE(this.keys.modulusKey)))
+      .then(() => this.exec('REQUEST_KEY_EXCHANGE', int64LE(this.keys.hostIntKey)))
+      .then(() => {
+        this.count = 0
+        return
+      })
   }
 
   getPacket(command, args) {
@@ -139,7 +143,7 @@ module.exports = class SSP extends EventEmitter {
     let DATA = [commandList[command].code].concat(...args)
 
     // Encrypted packet
-    if (this.encryptionKey !== null && (commandList[command].encrypted || this.encryptAllCommand)) {
+    if (this.encryptKey !== null && (commandList[command].encrypted || this.encryptAllCommand)) {
       const eCOUNT = Buffer.alloc(4)
       eCOUNT.writeUInt32LE(this.count, 0)
       let eCommandLine = [DATA.length].concat([...eCOUNT], DATA)
@@ -147,7 +151,7 @@ module.exports = class SSP extends EventEmitter {
       eCommandLine = eCommandLine.concat(ePACKING)
       eCommandLine = eCommandLine.concat(CRC16(eCommandLine))
 
-      const eDATA = [...encrypt(this.encryptionKey, Buffer.from(eCommandLine))]
+      const eDATA = [...encrypt(this.encryptKey, Buffer.from(eCommandLine))]
 
       DATA = [STEX].concat(eDATA)
       LENGTH = DATA.length
@@ -163,14 +167,8 @@ module.exports = class SSP extends EventEmitter {
     return comandLine
   }
 
-  exec(command, args = []) {
-    command = command.toUpperCase()
-    if (commandList[command] === undefined) {
-      throw new Error('command not found')
-    }
+  getPromise(buffer, command) {
     this.currentCommand = command
-    const buffer = Buffer.from(this.getPacket(command, args))
-
     return new Promise(resolve => {
       this.port.write(buffer)
       this.port.drain()
@@ -179,15 +177,24 @@ module.exports = class SSP extends EventEmitter {
       }
       return resolve(this.newEvent(command))
     }).then(res => {
-      return res.status === 'TIMEOUT' ? this.exec(command, args) : res
+      return res.status === 'TIMEOUT' ? this.getPromise(buffer, command) : res
     })
+  }
+
+  exec(command, args = []) {
+    command = command.toUpperCase()
+    if (commandList[command] === undefined) {
+      throw new Error('command not found')
+    }
+    const buffer = Buffer.from(this.getPacket(command, args))
+    return this.getPromise(buffer, command)
   }
 
   newEvent(command) {
     return new Promise(resolve => {
-      let timeout = true
       this.eventEmitter.once(command, buffer => {
-        timeout = false
+        clearTimeout(this.commandTimeout)
+
         if (Buffer.isBuffer(buffer)) {
           resolve(this.parsePacket(buffer))
         } else if (buffer === 'TIMEOUT') {
@@ -198,24 +205,22 @@ module.exports = class SSP extends EventEmitter {
           resolve({
             success: false,
             status: 'TIMEOUT',
-            command: this.currentCommand,
+            command,
             info: {},
           })
         }
       })
 
-      setTimeout(() => {
-        if (timeout) {
-          this.eventEmitter.emit(this.currentCommand, 'TIMEOUT')
-          this.currentCommand = null
-        }
+      this.commandTimeout = setTimeout(() => {
+        this.eventEmitter.emit(command, 'TIMEOUT')
+        this.currentCommand = null
       }, parseInt(this.timeout))
     }).then(
       res =>
         new Promise(resolve => {
           setTimeout(() => {
             resolve(res)
-          }, 200)
+          }, 100)
         })
     )
   }
@@ -231,7 +236,7 @@ module.exports = class SSP extends EventEmitter {
         return { success: false, error: 'Wrong CRC16' }
       }
       if (this.keys.key !== null && DATA[0] === 0x7e) {
-        DATA = decrypt(this.encryptionKey, Buffer.from(DATA.slice(1)))
+        DATA = decrypt(this.encryptKey, Buffer.from(DATA.slice(1)))
         if (this.debug) {
           console.log('Decrypted:', chalk.red(Buffer.from(DATA).toString('hex')))
         }
@@ -271,11 +276,11 @@ module.exports = class SSP extends EventEmitter {
     if (this.keys.key === null) {
       this.keys.slaveIntKey = Buffer.from(data).readBigInt64LE()
       this.keys.key = this.keys.slaveIntKey ** this.keys.hostRandom % this.keys.modulusKey
-      this.encryptionKey = Buffer.concat([Buffer.from(this.keys.fixedKey, 'hex').readBigInt64BE(), int64LE(this.keys.key)])
+      this.encryptKey = Buffer.concat([int64LE(Buffer.from(this.keys.fixedKey, 'hex').readBigInt64BE()), int64LE(this.keys.key)])
 
       this.count = 0
       if (this.debug) {
-        console.log('AES encrypt key:', chalk.red(`0x${Buffer.from(this.encryptionKey).toString('hex')}`))
+        console.log('AES encrypt key:', chalk.red(`0x${Buffer.from(this.encryptKey).toString('hex')}`))
         console.log('')
         console.log(this.keys)
         console.log('')
